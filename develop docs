@@ -1,0 +1,186 @@
+A three‑dashboard setup is exactly how professional ticketing platforms (Eventbrite, Universe, Ticketmaster Organizer Tools) structure their systems. Each role needs a different view, different permissions, and different workflows. Let’s map out **clean, production‑ready frontend documentation** for all three dashboards: **Admin**, **Organizer**, and **Customer**.
+
+This will give you a clear blueprint for UI, routing, permissions, and component structure.
+
+---
+
+# **🎛️ 1. Admin Dashboard**
+**Purpose:** Full system control. Admins manage the entire platform, not just their own events.
+
+## **Key Capabilities**
+- Manage all users (create, block, promote)
+- Manage all organizers
+- Approve or reject organizer accounts
+- View all events across the platform
+- Delete or suspend events
+- View global analytics
+- Manage refunds
+- View all orders
+- Ticket fraud detection (optional)
+- System settings (fees, taxes, platform rules)
+
+## **Main Pages**
+| Page | Description |
+|------|-------------|
+| `/admin` | Overview dashboard |
+| `/admin/users` | User list, roles, status |
+| `/admin/organizers` | Approvals, verification |
+| `/admin/events` | All events, filters, status |
+| `/admin/orders` | All orders, refunds |
+| `/admin/settings` | Platform configuration |
+
+## **UI Components**
+- AdminSidebar
+- UserTable
+- EventTable
+- OrderTable
+- AnalyticsCards
+- RoleBadge
+
+---
+
+# **🎟️ 2. Organizer Dashboard**
+**Purpose:** Event creators manage their own events, ticket types, sales, and check‑ins.
+
+## **Key Capabilities**
+- Create and edit events
+- Create ticket types (VIP, Regular, Early Bird)
+- View sales analytics for their events
+- Export attendee lists
+- Validate tickets (QR scanner)
+- Manage refunds for their own events
+- Communication tools (email attendees)
+
+## **Main Pages**
+| Page | Description |
+|------|-------------|
+| `/organizer` | Overview of their events |
+| `/organizer/events` | List of events they created |
+| `/organizer/events/new` | Create event |
+| `/organizer/events/[id]` | Edit event |
+| `/organizer/events/[id]/tickets` | Ticket types |
+| `/organizer/events/[id]/analytics` | Sales charts |
+| `/organizer/checkin` | QR scanner for ticket validation |
+
+## **UI Components**
+- OrganizerSidebar
+- EventForm
+- TicketTypeForm
+- QRScannerComponent
+- SalesChart
+- AttendeeTable
+
+---
+
+# **🧑‍💻 3. Customer Dashboard**
+**Purpose:** Customers manage their purchases, tickets, and profile.
+
+## **Key Capabilities**
+- View purchased tickets
+- Download/print tickets
+- View QR codes
+- View order history
+- Update profile
+- Save favorite events (optional)
+- Refund request (optional)
+
+## **Main Pages**
+| Page | Description |
+|------|-------------|
+| `/dashboard` | Customer home |
+| `/dashboard/orders` | List of orders |
+| `/dashboard/orders/[id]` | Order details |
+| `/dashboard/tickets` | All tickets |
+| `/dashboard/profile` | Profile settings |
+
+## **UI Components**
+- TicketCard
+- QRCodeDisplay
+- OrderCard
+- ProfileForm
+
+---
+
+# **🔐 Role-Based Access (Frontend)**
+
+### **Admin**
+```ts
+role === "ADMIN"
+```
+
+### **Organizer**
+```ts
+role === "ORGANIZER"
+```
+
+### **Customer**
+```ts
+role === "CUSTOMER"
+```
+
+### **Route Protection Example**
+```ts
+export function requireRole(role: string) {
+  const user = await apiGet("/auth/me");
+  if (user.role !== role) redirect("/unauthorized");
+  return user;
+}
+```
+
+---
+
+# **📁 Recommended Folder Structure**
+
+```
+src/app/
+ ├── admin/
+ │    ├── page.tsx
+ │    ├── users/page.tsx
+ │    ├── organizers/page.tsx
+ │    ├── events/page.tsx
+ │    ├── orders/page.tsx
+ │    └── settings/page.tsx
+ │
+ ├── organizer/
+ │    ├── page.tsx
+ │    ├── events/
+ │    │    ├── page.tsx
+ │    │    ├── new/page.tsx
+ │    │    └── [id]/page.tsx
+ │    ├── checkin/page.tsx
+ │    └── analytics/[id]/page.tsx
+ │
+ ├── dashboard/
+ │    ├── page.tsx
+ │    ├── orders/page.tsx
+ │    ├── orders/[id]/page.tsx
+ │    ├── tickets/page.tsx
+ │    └── profile/page.tsx
+```
+
+---
+
+# **📊 Dashboard UI Summary**
+
+| Feature | Admin | Organizer | Customer |
+|--------|--------|-----------|----------|
+| Manage all events | ✔️ | ❌ | ❌ |
+| Manage own events | ❌ | ✔️ | ❌ |
+| Ticket scanning | ❌ | ✔️ | ❌ |
+| View all orders | ✔️ | ❌ | ❌ |
+| View own orders | ❌ | ✔️ | ✔️ |
+| View own tickets | ❌ | ❌ | ✔️ |
+| Platform analytics | ✔️ | ❌ | ❌ |
+| Event analytics | ❌ | ✔️ | ❌ |
+| Profile settings | ✔️ | ✔️ | ✔️ |
+
+---
+
+# If you want, I can generate next:
+- **Full Next.js code skeleton** for all dashboards  
+- **UI components** (AdminSidebar, EventCard, TicketCard, QRScanner)  
+- **Role-based routing system**  
+- **API integration layer**  
+- **Figma-style UI layout**  
+
+Just tell me what you want to build next.

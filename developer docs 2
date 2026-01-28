@@ -1,0 +1,330 @@
+Below is a clean, modern **Frontend Developer Documentation** updated for **Next.js 16.1.6** and your exact project setup using:
+
+```
+pnpm create next-app@latest event-management --yes
+cd event-management
+pnpm dev
+```
+
+Everything is aligned with the **App Router**, **Server Components**, **TypeScript**, and **pnpm** workflows.
+
+---
+
+# **📘 Frontend Developer Documentation (Next.js 16.1.6)**  
+_For the Event Management & Ticketing System_
+
+---
+
+# **1. Project Setup**
+
+## **1.1 Create the project**
+You already used:
+
+```
+pnpm create next-app@latest event-management --yes
+cd event-management
+pnpm dev
+```
+
+This gives you:
+
+- Next.js 16.1.6  
+- App Router  
+- TypeScript  
+- Tailwind optional (if selected)  
+- ESLint + Turbopack  
+
+---
+
+# **2. Project Structure (Recommended)**
+
+```
+event-management/
+ ├── src/
+ │   ├── app/
+ │   │   ├── layout.tsx
+ │   │   ├── page.tsx
+ │   │   ├── (public)/
+ │   │   │    ├── events/
+ │   │   │    │    ├── page.tsx
+ │   │   │    │    └── [id]/page.tsx
+ │   │   │    ├── checkout/page.tsx
+ │   │   │    └── auth/
+ │   │   │         ├── login/page.tsx
+ │   │   │         └── register/page.tsx
+ │   │   │
+ │   │   ├── (dashboard)/
+ │   │   │    ├── admin/
+ │   │   │    │    ├── page.tsx
+ │   │   │    │    ├── events/page.tsx
+ │   │   │    │    ├── users/page.tsx
+ │   │   │    │    └── settings/page.tsx
+ │   │   │    ├── organizer/
+ │   │   │    │    ├── page.tsx
+ │   │   │    │    ├── events/page.tsx
+ │   │   │    │    ├── events/new/page.tsx
+ │   │   │    │    └── checkin/page.tsx
+ │   │   │    └── customer/
+ │   │   │         ├── page.tsx
+ │   │   │         ├── orders/page.tsx
+ │   │   │         └── tickets/page.tsx
+ │   │   │
+ │   ├── components/
+ │   ├── lib/
+ │   │   ├── api.ts
+ │   │   ├── auth.ts
+ │   │   ├── types.ts
+ │   │   └── stripe.ts
+ │   ├── styles/
+ │   └── env.d.ts
+ │
+ ├── public/
+ ├── package.json
+ ├── pnpm-lock.yaml
+ └── next.config.js
+```
+
+---
+
+# **3. Environment Variables**
+
+Create `.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=https://your-backend-url/api/v1
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+Restart dev server after changes:
+
+```
+pnpm dev
+```
+
+---
+
+# **4. API Client Layer (Next.js 16)**
+
+`src/lib/api.ts`
+
+```ts
+export async function api(path: string, options: RequestInit = {}) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
+    credentials: "include",
+    ...options,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return res.json();
+}
+
+export const apiGet = (path: string) => api(path);
+
+export const apiPost = (path: string, body: any) =>
+  api(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+```
+
+---
+
+# **5. Authentication Flow (Next.js App Router)**
+
+### **Login**
+- User submits email/password
+- Backend sets HttpOnly cookie
+- Frontend stores user info in React state or SWR
+
+### **Protected Routes**
+Use **Server Components** for protection:
+
+```ts
+import { redirect } from "next/navigation";
+import { apiGet } from "@/lib/api";
+
+export default async function AdminPage() {
+  const user = await apiGet("/auth/me");
+
+  if (user.role !== "ADMIN") redirect("/unauthorized");
+
+  return <div>Admin Dashboard</div>;
+}
+```
+
+---
+
+# **6. Dashboards (Admin / Organizer / Customer)**
+
+## **6.1 Admin Dashboard**
+```
+/admin
+/admin/events
+/admin/users
+/admin/settings
+```
+
+Capabilities:
+- Manage users
+- Manage all events
+- Platform analytics
+- Refunds
+
+---
+
+## **6.2 Organizer Dashboard**
+```
+/organizer
+/organizer/events
+/organizer/events/new
+/organizer/checkin
+```
+
+Capabilities:
+- Create events
+- Manage ticket types
+- View sales analytics
+- QR check-in
+
+---
+
+## **6.3 Customer Dashboard**
+```
+/customer
+/customer/orders
+/customer/tickets
+```
+
+Capabilities:
+- View orders
+- View tickets
+- Download QR codes
+
+---
+
+# **7. Checkout Flow (Stripe)**
+
+### **Step 1: Create order**
+```ts
+const res = await apiPost("/checkout/create-order", {
+  eventId,
+  items: [{ ticketTypeId, quantity }],
+});
+```
+
+Backend returns:
+
+```json
+{
+  "clientSecret": "pi_123_secret_456",
+  "orderId": 99
+}
+```
+
+### **Step 2: Stripe Elements**
+`src/components/StripeCheckoutForm.tsx`
+
+```tsx
+"use client";
+
+import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+export default function StripeCheckoutForm({ orderId }: { orderId: number }) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  async function handleSubmit(e: any) {
+    e.preventDefault();
+    await stripe?.confirmPayment({ elements, confirmParams: {} });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      <button>Pay Now</button>
+    </form>
+  );
+}
+```
+
+---
+
+# **8. Components**
+
+### **EventCard**
+- Title  
+- Date  
+- Venue  
+- “View Event” button  
+
+### **TicketSelector**
+- Ticket types  
+- Quantity selector  
+- “Continue to Checkout”  
+
+### **QRScanner**
+- Uses `react-qr-reader`  
+- Calls `/tickets/{code}/scan`  
+
+---
+
+# **9. Styling (Tailwind Recommended)**
+
+Install:
+
+```
+pnpm add -D tailwindcss postcss autoprefixer
+pnpm tailwindcss init -p
+```
+
+Add to `globals.css`:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+---
+
+# **10. Development Commands**
+
+| Command | Description |
+|--------|-------------|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm start` | Run production build |
+| `pnpm lint` | Lint code |
+
+---
+
+# **11. Deployment**
+
+### **Vercel**
+- Push to GitHub  
+- Import repo  
+- Add environment variables  
+- Deploy automatically  
+
+### **Railway**
+- Alternative for full-stack deployment  
+
+---
+
+# **12. Next Steps**
+
+I can generate next:
+
+- **Full folder structure with empty files**  
+- **Admin dashboard UI**  
+- **Organizer event creation form**  
+- **Customer ticket viewer**  
+- **API mocks for local development**  
+- **Role-based middleware for Next.js 16**  
+
+Tell me what you want to build next and I’ll prepare it.
