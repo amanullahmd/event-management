@@ -1,7 +1,11 @@
-import React from 'react';
+'use client';
+
+import { useEffect } from 'react';
 import { Header } from '@/components/common/Header';
 import { Sidebar } from '@/components/common/Sidebar';
-import { Footer } from '@/components/common/Footer';
+import { getRoleSidebarLinks } from '@/lib/utils/sidebar-links';
+import { useAuth } from '@/lib/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 /**
  * Organizer Dashboard Layout
@@ -12,51 +16,42 @@ export default function OrganizerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const menuItems = [
-    {
-      label: 'Dashboard',
-      href: '/organizer',
-      icon: '📊',
-    },
-    {
-      label: 'Events',
-      href: '/organizer/events',
-      icon: '📅',
-    },
-    {
-      label: 'Tickets',
-      href: '/organizer/tickets',
-      icon: '🎫',
-    },
-    {
-      label: 'Analytics',
-      href: '/organizer/analytics',
-      icon: '📈',
-    },
-    {
-      label: 'Check-in',
-      href: '/organizer/checkin',
-      icon: '✓',
-    },
-    {
-      label: 'Refunds',
-      href: '/organizer/refunds',
-      icon: '💰',
-    },
-  ];
+  const { isLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const organizerLinks = getRoleSidebarLinks('organizer');
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Header />
-      <div className="flex flex-1">
-        <Sidebar links={menuItems} title="Organizer Menu" />
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950">
+      <Sidebar links={organizerLinks} title="Organizer" />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
         <main className="flex-1 overflow-auto">
           <div className="p-6 md:p-8 max-w-7xl mx-auto w-full">
             {children}
           </div>
         </main>
       </div>
-      <Footer />
     </div>
   );
 }

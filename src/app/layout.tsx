@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { CartProvider } from "@/lib/context/CartContext";
+import { ThemeProvider } from "@/lib/context/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,13 +20,30 @@ export const metadata: Metadata = {
   description: "A comprehensive event management and ticketing platform",
 };
 
+const themeScript = `
+  (function() {
+    try {
+      const theme = localStorage.getItem('theme') || 'system';
+      const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-slate-950`}
       >
@@ -36,13 +54,15 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <AuthProvider>
-          <CartProvider>
-            <div id="main-content" tabIndex={-1}>
-              {children}
-            </div>
-          </CartProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <div id="main-content" tabIndex={-1}>
+                {children}
+              </div>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

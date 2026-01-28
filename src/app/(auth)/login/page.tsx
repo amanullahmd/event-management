@@ -35,10 +35,14 @@ export default function LoginPage() {
       // Attempt login
       await login(email, password);
 
-      // Redirect to dashboard based on user role
-      // The redirect will be handled by the useEffect in AuthContext
-      // For now, we'll redirect to a default dashboard
-      router.push('/dashboard');
+      // Redirect based on user role
+      if (email.includes('admin')) {
+        router.push('/admin');
+      } else if (email.includes('organizer')) {
+        router.push('/organizer');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Login failed. Please try again.';
@@ -49,31 +53,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Event Manager
+            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white text-2xl font-bold">E</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Welcome Back
             </h1>
-            <p className="text-gray-600">Sign in to your account</p>
+            <p className="text-gray-600 dark:text-gray-300">Sign in to your EventHub account</p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Email Address
               </label>
@@ -83,7 +90,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Email address"
               />
@@ -93,7 +100,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
                 Password
               </label>
@@ -103,7 +110,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Password"
               />
@@ -113,32 +120,58 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+              className="w-full bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 dark:disabled:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-violet-500/25"
             >
               {isSubmitting || isLoading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-900 font-semibold mb-2">
-              Demo Credentials:
+          <div className="mt-6 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/20 dark:to-fuchsia-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
+            <p className="text-sm font-semibold text-violet-900 dark:text-violet-200 mb-3">
+              🔐 Demo Credentials
             </p>
-            <p className="text-sm text-blue-800">
-              Email: <code className="bg-white px-2 py-1 rounded">admin@example.com</code>
-            </p>
-            <p className="text-sm text-blue-800">
-              Password: <code className="bg-white px-2 py-1 rounded">any password</code>
-            </p>
+            <div className="space-y-3">
+              {/* Admin */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-violet-100 dark:border-slate-700">
+                <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-1">Admin Account</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">admin@example.com</code>
+                </p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">admin123</code>
+                </p>
+              </div>
+              {/* Organizer */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-fuchsia-100 dark:border-slate-700">
+                <p className="text-xs font-semibold text-fuchsia-600 dark:text-fuchsia-400 mb-1">Organizer Account</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">organizer1@example.com</code>
+                </p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">organizer123</code>
+                </p>
+              </div>
+              {/* Customer */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-100 dark:border-slate-700">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Customer Account</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">customer1@example.com</code>
+                </p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">customer123</code>
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Register Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Don&apos;t have an account?{' '}
               <Link
                 href="/register"
-                className="text-indigo-600 hover:text-indigo-700 font-semibold"
+                className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-semibold"
               >
                 Sign up
               </Link>

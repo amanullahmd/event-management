@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/lib/hooks';
 import { getAllEvents, getAllOrders } from '@/lib/dummy-data';
 import { Button } from '@/components/ui/button';

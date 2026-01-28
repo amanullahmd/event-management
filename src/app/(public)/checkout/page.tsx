@@ -10,6 +10,8 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { getEventById, createOrder } from '@/lib/dummy-data';
 import type { Event } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 interface BillingInfo {
   firstName: string;
   lastName: string;

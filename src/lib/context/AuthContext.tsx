@@ -37,7 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const storedUserId = localStorage.getItem('auth_user_id');
         if (storedUserId) {
-          const foundUser = getUserById(storedUserId);
+          let foundUser = getUserById(storedUserId);
+          
+          // Handle organizer users that might not be in the users array
+          if (!foundUser && storedUserId.startsWith('organizer-')) {
+            const organizerNum = storedUserId.replace('organizer-', '');
+            foundUser = {
+              id: storedUserId,
+              name: `Organizer ${organizerNum}`,
+              email: `organizer${organizerNum}@example.com`,
+              role: 'organizer' as const,
+              status: 'active' as const,
+              createdAt: new Date(),
+            };
+          }
+          
           if (foundUser) {
             setUser(foundUser);
           } else {
@@ -61,8 +75,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 
+      // Demo credentials validation
+      const validCredentials: Record<string, { password: string; role: string }> = {
+        'admin@example.com': { password: 'admin123', role: 'admin' },
+        'organizer1@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer2@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer3@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer4@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer5@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer6@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer7@example.com': { password: 'organizer123', role: 'organizer' },
+        'organizer8@example.com': { password: 'organizer123', role: 'organizer' },
+        'customer1@example.com': { password: 'customer123', role: 'customer' },
+        'customer2@example.com': { password: 'customer123', role: 'customer' },
+        'customer3@example.com': { password: 'customer123', role: 'customer' },
+        'customer4@example.com': { password: 'customer123', role: 'customer' },
+        'customer5@example.com': { password: 'customer123', role: 'customer' },
+      };
+
+      // Check if email exists in valid credentials
+      const credentials = validCredentials[email];
+      if (!credentials) {
+        throw new Error('Invalid email or password');
+      }
+
+      // Validate password
+      if (credentials.password !== password) {
+        throw new Error('Invalid email or password');
+      }
+
       // Find user by email
-      const foundUser = getUserByEmail(email);
+      let foundUser = getUserByEmail(email);
+
+      // If not found in users, create a user object for organizers
+      if (!foundUser && credentials.role === 'organizer') {
+        const organizerNum = email.match(/organizer(\d+)/)?.[1] || '1';
+        foundUser = {
+          id: `organizer-${organizerNum}`,
+          name: `Organizer ${organizerNum}`,
+          email: email,
+          role: 'organizer' as const,
+          status: 'active' as const,
+          createdAt: new Date(),
+        };
+      }
 
       if (!foundUser) {
         throw new Error('Invalid email or password');
@@ -73,7 +129,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Your account has been blocked');
       }
 
-      // For dummy data, accept any password (in real app, verify password hash)
       // Store user ID in localStorage
       localStorage.setItem('auth_user_id', foundUser.id);
       setUser(foundUser);
