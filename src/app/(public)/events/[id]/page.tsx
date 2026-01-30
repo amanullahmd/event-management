@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TicketSelector } from '@/components/public/TicketSelector';
-import { getEventById, getOrganizerById } from '@/lib/dummy-data';
+import { getEventById } from '@/lib/dummy-data';
+import { mockLandingEvents } from '@/lib/mock-landing-data';
 import { useCart } from '@/lib/context/CartContext';
 import type { Event, TicketType } from '@/lib/types';
-import type { OrganizerProfile } from '@/lib/types/user';
 import { 
   Calendar, 
   MapPin, 
@@ -21,7 +21,6 @@ import {
   ArrowLeft,
   Ticket,
   ShoppingCart,
-  Building2,
   Star
 } from 'lucide-react';
 
@@ -29,20 +28,19 @@ export default function EventDetailsPage() {
   const params = useParams();
   const { addItem, items } = useCart();
   const [event, setEvent] = useState<Event | null>(null);
-  const [organizer, setOrganizer] = useState<OrganizerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddedMessage, setShowAddedMessage] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     if (params.id) {
-      const eventData = getEventById(params.id as string);
+      // Try to get from dummy data first, then from mock landing data
+      let eventData = getEventById(params.id as string);
+      if (!eventData) {
+        eventData = mockLandingEvents.find(e => e.id === params.id);
+      }
       if (eventData) {
         setEvent(eventData);
-        const organizerData = getOrganizerById(eventData.organizerId);
-        if (organizerData) {
-          setOrganizer(organizerData);
-        }
       }
       setIsLoading(false);
     }
@@ -286,30 +284,7 @@ export default function EventDetailsPage() {
               </div>
             </Card>
 
-            {/* Organizer Info */}
-            {organizer && (
-              <Card className="p-6 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  Organizer
-                </h2>
-                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white text-2xl font-bold">
-                    {organizer.businessName.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 dark:text-white">{organizer.businessName}</p>
-                    {organizer.verificationStatus === 'verified' && (
-                      <span className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-400 mt-1">
-                        <CheckCircle className="w-4 h-4" /> Verified Organizer
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )}
+
           </div>
 
           {/* Ticket Selection Sidebar */}
