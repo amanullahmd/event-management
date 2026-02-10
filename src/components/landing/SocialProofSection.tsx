@@ -76,7 +76,7 @@ export function SocialProofSection({
                 </p>
               </div>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                {trustMetrics.organizers.toLocaleString()}+
+                {trustMetrics.organizers}+
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 event organizers
@@ -93,7 +93,7 @@ export function SocialProofSection({
                 </p>
               </div>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                {trustMetrics.eventsHosted.toLocaleString()}+
+                {trustMetrics.eventsHosted}+
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 on our platform

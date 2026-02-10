@@ -38,36 +38,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token) {
           // Fetch current user from backend using stored token
           const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-          const response = await fetch(`${backendUrl}/api/auth/me`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
+          console.log('Initializing auth with backend URL:', backendUrl);
+          
+          try {
+            const response = await fetch(`${backendUrl}/api/auth/me`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
 
-          if (response.ok) {
-            const data = await response.json();
-            const user: User = {
-              id: data.id,
-              name: `${data.firstName} ${data.lastName}`,
-              email: data.email,
-              role: data.role.toLowerCase() as UserRole,
-              status: 'active' as const,
-              createdAt: new Date(),
-            };
-            setUser(user);
-          } else {
-            // Token is invalid, clear it
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user_id');
+            if (response.ok) {
+              const data = await response.json();
+              const user: User = {
+                id: data.id,
+                name: `${data.firstName} ${data.lastName}`,
+                email: data.email,
+                role: data.role.toLowerCase() as UserRole,
+                status: 'active' as const,
+                createdAt: new Date(),
+              };
+              setUser(user);
+            } else {
+              // Token is invalid, clear it
+              console.warn('Token validation failed with status:', response.status);
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('auth_user_id');
+              localStorage.removeItem('auth_user_role');
+            }
+          } catch (fetchError) {
+            console.error('Failed to fetch user from backend:', fetchError);
+            // Don't clear tokens on network error, just skip initialization
           }
         }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
-        // Clear tokens on error
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user_id');
       } finally {
         setIsLoading(false);
       }
@@ -81,6 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Call backend API
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      console.log('Attempting login with backend URL:', backendUrl);
+      
       const response = await fetch(`${backendUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -90,8 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Login failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -113,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(user);
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
