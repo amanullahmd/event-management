@@ -47,13 +47,39 @@ export default function RegisterPage() {
     if (!formData.password) {
       return 'Password is required';
     }
-    if (formData.password.length < 6) {
-      return 'Password must be at least 6 characters';
+    if (formData.password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!/\d/.test(formData.password)) {
+      return 'Password must contain at least one number';
     }
     if (formData.password !== formData.confirmPassword) {
       return 'Passwords do not match';
     }
     return null;
+  };
+
+  const getPasswordStrength = (): { strength: number; color: string; text: string } => {
+    const password = formData.password;
+    if (!password) return { strength: 0, color: 'bg-gray-300', text: '' };
+
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[!@#$%^&*]/.test(password)) strength++;
+
+    if (strength <= 2) return { strength: 25, color: 'bg-red-500', text: 'Weak' };
+    if (strength <= 3) return { strength: 50, color: 'bg-yellow-500', text: 'Fair' };
+    if (strength <= 4) return { strength: 75, color: 'bg-blue-500', text: 'Good' };
+    return { strength: 100, color: 'bg-green-500', text: 'Strong' };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,6 +224,49 @@ export default function RegisterPage() {
                 disabled={isSubmitting || isLoading}
                 aria-label="Password"
               />
+              
+              {/* Password Strength Indicator */}
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-slate-600">Password strength:</span>
+                    <span className={`text-xs font-semibold ${
+                      getPasswordStrength().color === 'bg-red-500' ? 'text-red-600' :
+                      getPasswordStrength().color === 'bg-yellow-500' ? 'text-yellow-600' :
+                      getPasswordStrength().color === 'bg-blue-500' ? 'text-blue-600' :
+                      'text-green-600'
+                    }`}>
+                      {getPasswordStrength().text}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${getPasswordStrength().color}`}
+                      style={{ width: `${getPasswordStrength().strength}%` }}
+                    />
+                  </div>
+                  
+                  {/* Requirements Checklist */}
+                  <div className="mt-3 space-y-1 text-xs">
+                    <div className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : 'text-slate-500'}`}>
+                      <span className="mr-2">{formData.password.length >= 8 ? '✓' : '○'}</span>
+                      At least 8 characters
+                    </div>
+                    <div className={`flex items-center ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-slate-500'}`}>
+                      <span className="mr-2">{/[A-Z]/.test(formData.password) ? '✓' : '○'}</span>
+                      One uppercase letter (A-Z)
+                    </div>
+                    <div className={`flex items-center ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-slate-500'}`}>
+                      <span className="mr-2">{/[a-z]/.test(formData.password) ? '✓' : '○'}</span>
+                      One lowercase letter (a-z)
+                    </div>
+                    <div className={`flex items-center ${/\d/.test(formData.password) ? 'text-green-600' : 'text-slate-500'}`}>
+                      <span className="mr-2">{/\d/.test(formData.password) ? '✓' : '○'}</span>
+                      One number (0-9)
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Confirm Password Field */}

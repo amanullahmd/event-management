@@ -19,6 +19,8 @@ export interface AuthContextType {
     password: string,
     role: UserRole
   ) => Promise<void>;
+  refreshToken: () => Promise<void>;
+  isTokenExpiringSoon: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +31,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTokenExpiringSoon, setIsTokenExpiringSoon] = useState(false);
+  const [tokenExpirationTimer, setTokenExpirationTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Check if token is expiring soon (within 5 minutes)
+  const checkTokenExpiration = () => {
+    const token = localStorage.getItem('auth_token');
+    const tokenExpiresAt = localStorage.getItem('auth_token_expires_at');
+    
+    if (token && tokenExpiresAt) {
+      const expiresAt = new Date(tokenExpiresAt).getTime();
+      const now = new Date().getTime();
+      const timeUntilExpiration = expiresAt - now;
+      const fiveMinutesInMs = 5 * 60 * 1000;
+      
+      if (timeUntilExpiration > 0 && timeUntilExpiration < fiveMinutesInMs) {
+        setIsTokenExpiringSoon(true);
+        return true;
+      }
+    }
+    
+    setIsTokenExpiringSoon(false);
+    return false;
+  };
+
+  // Set up token expiration check interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkTokenExpiration();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
@@ -60,10 +94,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 createdAt: new Date(),
               };
               setUser(user);
+              checkTokenExpiration();
             } else {
               // Token is invalid, clear it
               console.warn('Token validation failed with status:', response.status);
               localStorage.removeItem('auth_token');
+              localStorage.removeItem('auth_refresh_token');
+              localStorage.removeItem('auth_token_expires_at');
               localStorage.removeItem('auth_user_id');
               localStorage.removeItem('auth_user_role');
             }
@@ -88,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Call backend API
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       console.log('Attempting login with backend URL:', backendUrl);
+      console.log('Login request body:', { email, password: '***' });
       
       const response = await fetch(`${backendUrl}/api/auth/login`, {
         method: 'POST',
@@ -97,17 +135,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
+      console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('Login error response:', errorData);
         throw new Error(errorData.message || `Login failed with status ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Login successful, user:', { id: data.id, email: data.email, role: data.role });
       
-      // Store JWT token and user info
+      // Store JWT tokens and user info
       localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_refresh_token', data.refreshToken);
       localStorage.setItem('auth_user_id', data.id);
       localStorage.setItem('auth_user_role', data.role.toLowerCase());
+      
+      // Store token expiration time (15 minutes from now)
+      const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
+      localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
       
       // Create user object from response
       const user: User = {
@@ -120,28 +168,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       
       setUser(user);
+      checkTokenExpiration();
     } catch (error) {
       console.error('Login error:', error);
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        console.error('Network error - backend may not be accessible at:', process.env.NEXT_PUBLIC_BACKEND_URL);
+      }
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
+  const refreshToken = async () => {
+    try {
+      const refreshTokenValue = localStorage.getItem('auth_refresh_token');
+      if (!refreshTokenValue) {
+        throw new Error('No refresh token available');
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: refreshTokenValue }),
+      });
+
+      if (!response.ok) {
+        // Refresh failed, clear tokens and redirect to login
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_refresh_token');
+        localStorage.removeItem('auth_token_expires_at');
+        localStorage.removeItem('auth_user_id');
+        localStorage.removeItem('auth_user_role');
+        setUser(null);
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      
+      // Update stored token
+      localStorage.setItem('auth_token', data.accessToken);
+      
+      // Update token expiration time
+      const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
+      localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
+      
+      console.log('Token refreshed successfully');
+      checkTokenExpiration();
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        // Call backend logout endpoint if available
+      const refreshTokenValue = localStorage.getItem('auth_refresh_token');
+      if (refreshTokenValue) {
+        // Call backend logout endpoint
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         await fetch(`${backendUrl}/api/auth/logout`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ refreshToken: refreshTokenValue }),
         }).catch(() => {
-          // Logout endpoint may not exist, continue with client-side logout
+          // Logout endpoint may fail, continue with client-side logout
         });
       }
     } catch (error) {
@@ -149,9 +245,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       // Clear tokens and user state
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_refresh_token');
+      localStorage.removeItem('auth_token_expires_at');
       localStorage.removeItem('auth_user_id');
       localStorage.removeItem('auth_user_role');
       setUser(null);
+      setIsTokenExpiringSoon(false);
+      
+      if (tokenExpirationTimer) {
+        clearTimeout(tokenExpirationTimer);
+        setTokenExpirationTimer(null);
+      }
     }
   };
 
@@ -186,10 +290,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       
-      // Store JWT token and user info
+      // Store JWT tokens and user info
       localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_refresh_token', data.refreshToken);
       localStorage.setItem('auth_user_id', data.id);
       localStorage.setItem('auth_user_role', data.role.toLowerCase());
+      
+      // Store token expiration time
+      const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
+      localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
       
       // Create user object from response
       const user: User = {
@@ -202,6 +311,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       
       setUser(user);
+      checkTokenExpiration();
     } catch (error) {
       throw error;
     } finally {
@@ -216,6 +326,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     register,
+    refreshToken,
+    isTokenExpiringSoon,
   };
 
   return (
