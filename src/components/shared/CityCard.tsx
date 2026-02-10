@@ -101,7 +101,7 @@ export function CityCard({
         {/* Event count - Validates: Requirements 10.3 */}
         <div className="flex items-center gap-1.5 text-sm text-white/90">
           <MapPin className="w-4 h-4" />
-          <span>{city.eventCount.toLocaleString()} events</span>
+          <span>{city.eventCount} events</span>
         </div>
       </div>
     </Link>

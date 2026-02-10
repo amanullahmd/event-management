@@ -35,14 +35,16 @@ export default function LoginPage() {
       // Attempt login
       await login(email, password);
 
-      // Redirect based on user role
-      if (email.includes('admin')) {
-        router.push('/admin');
-      } else if (email.includes('organizer')) {
-        router.push('/organizer');
-      } else {
-        router.push('/dashboard');
-      }
+      // Redirect based on user role from auth context
+      const dashboardMap: Record<string, string> = {
+        admin: '/admin',
+        organizer: '/organizer',
+        customer: '/dashboard',
+      };
+      
+      // Get the user role from the auth context
+      const userRole = localStorage.getItem('auth_user_role') || 'customer';
+      router.push(dashboardMap[userRole] || '/dashboard');
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Login failed. Please try again.';
@@ -126,44 +128,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/20 dark:to-fuchsia-900/20 border border-violet-200 dark:border-violet-800 rounded-xl">
-            <p className="text-sm font-semibold text-violet-900 dark:text-violet-200 mb-3">
-              🔐 Demo Credentials
-            </p>
-            <div className="space-y-3">
-              {/* Admin */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-violet-100 dark:border-slate-700">
-                <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-1">Admin Account</p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">admin@example.com</code>
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">admin123</code>
-                </p>
-              </div>
-              {/* Organizer */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-fuchsia-100 dark:border-slate-700">
-                <p className="text-xs font-semibold text-fuchsia-600 dark:text-fuchsia-400 mb-1">Organizer Account</p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">organizer1@example.com</code>
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">organizer123</code>
-                </p>
-              </div>
-              {/* Customer */}
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-100 dark:border-slate-700">
-                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Customer Account</p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Email:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">customer1@example.com</code>
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Password:</span> <code className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-900 dark:text-white text-xs">customer123</code>
-                </p>
-              </div>
-            </div>
-          </div>
+
 
           {/* Register Link */}
           <div className="mt-6 text-center">

@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, UserRole } from '../types/user';
-import { getUserByEmail, getUserById, getAllUsers } from '../dummy-data';
 
 /**
  * Authentication context for managing user authentication state
@@ -13,7 +12,7 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (
     name: string,
     email: string,
@@ -33,34 +32,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
-        const storedUserId = localStorage.getItem('auth_user_id');
-        if (storedUserId) {
-          let foundUser = getUserById(storedUserId);
-          
-          // Handle organizer users that might not be in the users array
-          if (!foundUser && storedUserId.startsWith('organizer-')) {
-            const organizerNum = storedUserId.replace('organizer-', '');
-            foundUser = {
-              id: storedUserId,
-              name: `Organizer ${organizerNum}`,
-              email: `organizer${organizerNum}@example.com`,
-              role: 'organizer' as const,
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          // Fetch current user from backend using stored token
+          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+          const response = await fetch(`${backendUrl}/api/auth/me`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const user: User = {
+              id: data.id,
+              name: `${data.firstName} ${data.lastName}`,
+              email: data.email,
+              role: data.role.toLowerCase() as UserRole,
               status: 'active' as const,
               createdAt: new Date(),
             };
-          }
-          
-          if (foundUser) {
-            setUser(foundUser);
+            setUser(user);
           } else {
-            // Clear invalid stored user
+            // Token is invalid, clear it
+            localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user_id');
           }
         }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
+        // Clear tokens on error
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user_id');
       } finally {
         setIsLoading(false);
       }
@@ -72,66 +79,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Call backend API
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      // Demo credentials validation
-      const validCredentials: Record<string, { password: string; role: string }> = {
-        'admin@example.com': { password: 'admin123', role: 'admin' },
-        'organizer1@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer2@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer3@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer4@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer5@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer6@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer7@example.com': { password: 'organizer123', role: 'organizer' },
-        'organizer8@example.com': { password: 'organizer123', role: 'organizer' },
-        'customer1@example.com': { password: 'customer123', role: 'customer' },
-        'customer2@example.com': { password: 'customer123', role: 'customer' },
-        'customer3@example.com': { password: 'customer123', role: 'customer' },
-        'customer4@example.com': { password: 'customer123', role: 'customer' },
-        'customer5@example.com': { password: 'customer123', role: 'customer' },
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data = await response.json();
+      
+      // Store JWT token and user info
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user_id', data.id);
+      localStorage.setItem('auth_user_role', data.role.toLowerCase());
+      
+      // Create user object from response
+      const user: User = {
+        id: data.id,
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        role: data.role.toLowerCase() as UserRole,
+        status: 'active' as const,
+        createdAt: new Date(),
       };
-
-      // Check if email exists in valid credentials
-      const credentials = validCredentials[email];
-      if (!credentials) {
-        throw new Error('Invalid email or password');
-      }
-
-      // Validate password
-      if (credentials.password !== password) {
-        throw new Error('Invalid email or password');
-      }
-
-      // Find user by email
-      let foundUser = getUserByEmail(email);
-
-      // If not found in users, create a user object for organizers
-      if (!foundUser && credentials.role === 'organizer') {
-        const organizerNum = email.match(/organizer(\d+)/)?.[1] || '1';
-        foundUser = {
-          id: `organizer-${organizerNum}`,
-          name: `Organizer ${organizerNum}`,
-          email: email,
-          role: 'organizer' as const,
-          status: 'active' as const,
-          createdAt: new Date(),
-        };
-      }
-
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
-
-      // Check if user is blocked
-      if (foundUser.status === 'blocked') {
-        throw new Error('Your account has been blocked');
-      }
-
-      // Store user ID in localStorage
-      localStorage.setItem('auth_user_id', foundUser.id);
-      setUser(foundUser);
+      
+      setUser(user);
     } catch (error) {
       throw error;
     } finally {
@@ -139,9 +119,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('auth_user_id');
-    setUser(null);
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        // Call backend logout endpoint if available
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        await fetch(`${backendUrl}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }).catch(() => {
+          // Logout endpoint may not exist, continue with client-side logout
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear tokens and user state
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user_id');
+      localStorage.removeItem('auth_user_role');
+      setUser(null);
+    }
   };
 
   const register = async (
@@ -152,31 +154,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Call backend API
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          firstName: name.split(' ')[0],
+          lastName: name.split(' ').slice(1).join(' ') || '',
+          email, 
+          password,
+          role: role.toUpperCase(),
+        }),
+      });
 
-      // Check if email already exists
-      const existingUser = getUserByEmail(email);
-      if (existingUser) {
-        throw new Error('Email already registered');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
       }
 
-      // For dummy data, we would normally create a new user
-      // For now, we'll just use an existing user with the provided email
-      // In a real app, this would create a new user in the database
-      const allUsers = getAllUsers();
-      const newUser: User = {
-        id: `customer-${allUsers.length + 1}`,
-        name,
-        email,
-        role,
-        status: 'active',
+      const data = await response.json();
+      
+      // Store JWT token and user info
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user_id', data.id);
+      localStorage.setItem('auth_user_role', data.role.toLowerCase());
+      
+      // Create user object from response
+      const user: User = {
+        id: data.id,
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        role: data.role.toLowerCase() as UserRole,
+        status: 'active' as const,
         createdAt: new Date(),
       };
-
-      // Store user ID in localStorage
-      localStorage.setItem('auth_user_id', newUser.id);
-      setUser(newUser);
+      
+      setUser(user);
     } catch (error) {
       throw error;
     } finally {
