@@ -102,13 +102,8 @@ export default function RegisterPage() {
         formData.role
       );
 
-      // Redirect to dashboard
-      const dashboardMap: Record<UserRole, string> = {
-        admin: '/admin',
-        organizer: '/organizer',
-        customer: '/dashboard',
-      };
-      router.push(dashboardMap[formData.role]);
+      // Redirect to verification page
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
       const errorMessage =
         err instanceof Error
