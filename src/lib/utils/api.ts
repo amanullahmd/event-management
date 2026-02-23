@@ -179,6 +179,9 @@ export function apiPut<T>(endpoint: string, data?: unknown): Promise<T> {
 /**
  * DELETE request
  */
-export function apiDelete<T>(endpoint: string): Promise<T> {
-  return apiRequest<T>(endpoint, { method: 'DELETE' });
+export function apiDelete<T>(endpoint: string, data?: unknown): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'DELETE',
+    body: data ? JSON.stringify(data) : undefined,
+  });
 }
