@@ -24,9 +24,11 @@ export default function CreateTicketTypePage() {
   // Handle form submission
   const handleSubmit = async (data: {
     name: string;
+    category: string;
     price: number;
-    quantity: number;
-    type: 'vip' | 'regular' | 'early-bird';
+    quantityLimit: number;
+    saleStartDate: string;
+    saleEndDate: string;
   }) => {
     setIsSubmitting(true);
     setError(null);
@@ -36,15 +38,25 @@ export default function CreateTicketTypePage() {
         throw new Error('Event not found');
       }
 
+      // Map category to type
+      const typeMap: Record<string, 'vip' | 'regular' | 'early-bird'> = {
+        'VIP': 'vip',
+        'EARLY_BIRD': 'early-bird',
+        'GENERAL_ADMISSION': 'regular',
+        'STUDENT': 'regular',
+        'GROUP': 'regular',
+        'CUSTOM': 'regular',
+      };
+
       // Add ticket type to event
       const newTicketType = {
         id: `ticket-type-${event.id}-${Date.now()}`,
         eventId: event.id,
         name: data.name,
         price: data.price,
-        quantity: data.quantity,
+        quantity: data.quantityLimit,
         sold: 0,
-        type: data.type,
+        type: typeMap[data.category] || 'regular',
       };
 
       event.ticketTypes.push(newTicketType);

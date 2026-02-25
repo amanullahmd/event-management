@@ -2,7 +2,7 @@
  * Event type definitions for the Event Management & Ticketing System
  */
 
-export type EventStatus = 'active' | 'inactive' | 'cancelled';
+export type EventStatus = 'active' | 'inactive' | 'cancelled' | 'draft' | 'published' | 'unpublished';
 export type TicketTypeCategory = 'vip' | 'regular' | 'early-bird';
 
 export interface Event {
@@ -10,6 +10,8 @@ export interface Event {
   name: string;
   description: string;
   organizerId: string;
+  eventType?: string;
+  onlineLink?: string;
   date: Date;
   location: string;
   category: string;
@@ -18,6 +20,8 @@ export interface Event {
   ticketTypes: TicketType[];
   totalAttendees: number;
   createdAt: Date;
+  publishedAt?: Date;
+  unpublishedAt?: Date;
 }
 
 export interface TicketType {

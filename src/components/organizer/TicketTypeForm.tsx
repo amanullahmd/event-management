@@ -7,23 +7,27 @@ import { Input } from '@/components/ui/input';
 interface TicketTypeFormProps {
   onSubmit: (data: {
     name: string;
+    category: string;
     price: number;
-    quantity: number;
-    type: 'vip' | 'regular' | 'early-bird';
+    quantityLimit: number;
+    saleStartDate: string;
+    saleEndDate: string;
   }) => void;
   onCancel: () => void;
   isLoading?: boolean;
   initialData?: {
     name: string;
+    category: string;
     price: number;
-    quantity: number;
-    type: 'vip' | 'regular' | 'early-bird';
+    quantityLimit: number;
+    saleStartDate: string;
+    saleEndDate: string;
   };
 }
 
 /**
  * Ticket Type Form Component
- * Form for creating and editing ticket types
+ * Form for creating and editing ticket types with pricing, quantity limits, and sale periods
  */
 export function TicketTypeForm({
   onSubmit,
@@ -34,12 +38,23 @@ export function TicketTypeForm({
   const [formData, setFormData] = useState(
     initialData || {
       name: '',
+      category: 'GENERAL_ADMISSION',
       price: 0,
-      quantity: 0,
-      type: 'regular' as const,
+      quantityLimit: 0,
+      saleStartDate: '',
+      saleEndDate: '',
     }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const categories = [
+    { value: 'GENERAL_ADMISSION', label: 'General Admission' },
+    { value: 'VIP', label: 'VIP' },
+    { value: 'EARLY_BIRD', label: 'Early Bird' },
+    { value: 'STUDENT', label: 'Student' },
+    { value: 'GROUP', label: 'Group' },
+    { value: 'CUSTOM', label: 'Custom' },
+  ];
 
   // Validate form
   const validateForm = () => {
@@ -47,12 +62,35 @@ export function TicketTypeForm({
 
     if (!formData.name.trim()) {
       newErrors.name = 'Ticket type name is required';
+    } else if (formData.name.length > 100) {
+      newErrors.name = 'Ticket type name must be 100 characters or less';
     }
+
     if (formData.price <= 0) {
       newErrors.price = 'Price must be greater than 0';
     }
-    if (formData.quantity <= 0) {
-      newErrors.quantity = 'Quantity must be greater than 0';
+
+    if (formData.quantityLimit <= 0) {
+      newErrors.quantityLimit = 'Quantity limit must be greater than 0';
+    }
+
+    if (!formData.saleStartDate) {
+      newErrors.saleStartDate = 'Sale start date is required';
+    }
+
+    if (!formData.saleEndDate) {
+      newErrors.saleEndDate = 'Sale end date is required';
+    }
+
+    if (formData.saleStartDate && formData.saleEndDate) {
+      const startDate = new Date(formData.saleStartDate);
+      const endDate = new Date(formData.saleEndDate);
+      if (endDate <= startDate) {
+        newErrors.saleEndDate = 'Sale end date must be after start date';
+      }
+      if (endDate < new Date()) {
+        newErrors.saleEndDate = 'Sale end date must be in the future';
+      }
     }
 
     setErrors(newErrors);
@@ -76,7 +114,7 @@ export function TicketTypeForm({
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === 'price' || name === 'quantity'
+        name === 'price' || name === 'quantityLimit'
           ? parseFloat(value) || 0
           : value,
     }));
@@ -89,8 +127,6 @@ export function TicketTypeForm({
       });
     }
   };
-
-  const ticketTypes = ['early-bird', 'regular', 'vip'];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -105,6 +141,7 @@ export function TicketTypeForm({
           value={formData.name}
           onChange={handleChange}
           placeholder="e.g., VIP Pass, General Admission"
+          maxLength={100}
           className={errors.name ? 'border-red-500' : ''}
         />
         {errors.name && (
@@ -112,6 +149,25 @@ export function TicketTypeForm({
             {errors.name}
           </p>
         )}
+      </div>
+
+      {/* Category Selector */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          Category *
+        </label>
+        <select
+          name="category"
+          value={formData.category}
+          onChange={handleChange}
+          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {categories.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Price and Quantity */}
@@ -138,45 +194,67 @@ export function TicketTypeForm({
           )}
         </div>
 
-        {/* Quantity */}
+        {/* Quantity Limit */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Quantity *
+            Quantity Limit *
           </label>
           <Input
             type="number"
-            name="quantity"
-            value={formData.quantity}
+            name="quantityLimit"
+            value={formData.quantityLimit}
             onChange={handleChange}
             placeholder="0"
-            min="0"
-            className={errors.quantity ? 'border-red-500' : ''}
+            min="1"
+            className={errors.quantityLimit ? 'border-red-500' : ''}
           />
-          {errors.quantity && (
+          {errors.quantityLimit && (
             <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-              {errors.quantity}
+              {errors.quantityLimit}
             </p>
           )}
         </div>
       </div>
 
-      {/* Ticket Type Category */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Ticket Category
-        </label>
-        <select
-          name="type"
-          value={formData.type}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {ticketTypes.map((type) => (
-            <option key={type} value={type}>
-              {type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')}
-            </option>
-          ))}
-        </select>
+      {/* Sale Period */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Sale Start Date */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Sale Start Date *
+          </label>
+          <Input
+            type="datetime-local"
+            name="saleStartDate"
+            value={formData.saleStartDate}
+            onChange={handleChange}
+            className={errors.saleStartDate ? 'border-red-500' : ''}
+          />
+          {errors.saleStartDate && (
+            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+              {errors.saleStartDate}
+            </p>
+          )}
+        </div>
+
+        {/* Sale End Date */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Sale End Date *
+          </label>
+          <Input
+            type="datetime-local"
+            name="saleEndDate"
+            value={formData.saleEndDate}
+            onChange={handleChange}
+            className={errors.saleEndDate ? 'border-red-500' : ''}
+          />
+          {errors.saleEndDate && (
+            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+              {errors.saleEndDate}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Form Actions */}

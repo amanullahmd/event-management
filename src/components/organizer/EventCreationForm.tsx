@@ -2,14 +2,19 @@
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { DateTimePicker } from '../shared/DateTimePicker';
+import { TimezoneSelector } from '../shared/TimezoneSelector';
+import { EventTypeSelector, type EventType } from '../shared/EventTypeSelector';
 
 interface CreateEventRequest {
   title: string;
   description: string;
-  eventType: string;
+  eventType: EventType;
   startDate: string;
   endDate: string;
-  location: string;
+  timezone: string;
+  location?: string;
+  onlineLink?: string;
   capacity?: number;
   tags?: string[];
   notes?: string;
@@ -31,10 +36,12 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
   const [formData, setFormData] = useState<CreateEventRequest>({
     title: '',
     description: '',
-    eventType: 'conference',
+    eventType: 'ONLINE',
     startDate: '',
     endDate: '',
+    timezone: 'UTC',
     location: '',
+    onlineLink: '',
     capacity: undefined,
     tags: [],
     notes: '',
@@ -82,12 +89,32 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
     return null;
   };
 
-  const validateLocation = (location: string): string | null => {
-    if (!location || location.trim().length === 0) {
-      return 'Location is required';
+  const validateOnlineLink = (link: string, eventType: EventType): string | null => {
+    if (eventType === 'ONLINE' || eventType === 'HYBRID') {
+      if (!link || link.trim().length === 0) {
+        return 'Online link is required for online and hybrid events';
+      }
+      // Basic URL validation
+      try {
+        new URL(link);
+      } catch {
+        return 'Online link must be a valid URL';
+      }
     }
-    if (location.length > 500) {
-      return 'Location must not exceed 500 characters';
+    return null;
+  };
+
+  const validateLocation = (location: string, eventType: EventType): string | null => {
+    if (eventType === 'IN_PERSON' || eventType === 'HYBRID') {
+      if (!location || location.trim().length === 0) {
+        return 'Location is required for in-person and hybrid events';
+      }
+      if (location.length < 3) {
+        return 'Location must be at least 3 characters';
+      }
+      if (location.length > 500) {
+        return 'Location must not exceed 500 characters';
+      }
     }
     return null;
   };
@@ -152,7 +179,10 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
         error = validateEventType(value);
         break;
       case 'location':
-        error = validateLocation(value);
+        error = validateLocation(value, formData.eventType);
+        break;
+      case 'onlineLink':
+        error = validateOnlineLink(value, formData.eventType);
         break;
       case 'capacity':
         error = validateCapacity(value);
@@ -168,37 +198,32 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
         return newErrors;
       });
     }
+  }, [formData.eventType]);
+
+  const handleDateTimeChange = useCallback((startDate: Date, endDate: Date, timezone: string) => {
+    // Convert dates to ISO string format for API
+    const startDateStr = startDate.toISOString().slice(0, 16);
+    const endDateStr = endDate.toISOString().slice(0, 16);
+    
+    setFormData(prev => ({
+      ...prev,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      timezone: timezone,
+    }));
+
+    // Clear date errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.startDate;
+      delete newErrors.endDate;
+      return newErrors;
+    });
   }, []);
 
-  const handleDateChange = useCallback((field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Validate dates
-    const dateErrors = validateDates(
-      field === 'startDate' ? value : formData.startDate,
-      field === 'endDate' ? value : formData.endDate
-    );
-
-    if (dateErrors.start) {
-      setErrors(prev => ({ ...prev, startDate: dateErrors.start }));
-    } else {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.startDate;
-        return newErrors;
-      });
-    }
-
-    if (dateErrors.end) {
-      setErrors(prev => ({ ...prev, endDate: dateErrors.end }));
-    } else {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.endDate;
-        return newErrors;
-      });
-    }
-  }, [formData.startDate, formData.endDate]);
+  const handleTimezoneChange = useCallback((timezone: string) => {
+    setFormData(prev => ({ ...prev, timezone }));
+  }, []);
 
   const handleAddTag = useCallback(() => {
     if (tagInput.trim()) {
@@ -229,7 +254,10 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
     const eventTypeError = validateEventType(formData.eventType);
     if (eventTypeError) newErrors.eventType = eventTypeError;
 
-    const locationError = validateLocation(formData.location);
+    const onlineLinkError = validateOnlineLink(formData.onlineLink || '', formData.eventType);
+    if (onlineLinkError) newErrors.onlineLink = onlineLinkError;
+
+    const locationError = validateLocation(formData.location || '', formData.eventType);
     if (locationError) newErrors.location = locationError;
 
     const capacityError = validateCapacity(formData.capacity);
@@ -360,77 +388,73 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
 
         {/* Event Type */}
         <div>
-          <label htmlFor="eventType" className="block text-sm font-medium text-gray-700">
-            Event Type *
-          </label>
-          <select
-            id="eventType"
+          <EventTypeSelector
             value={formData.eventType}
-            onChange={(e) => handleFieldChange('eventType', e.target.value)}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.eventType ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            {EVENT_TYPES.map(type => (
-              <option key={type} value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </option>
-            ))}
-          </select>
-          {errors.eventType && <p className="mt-1 text-sm text-red-600">{errors.eventType}</p>}
+            onChange={(type) => handleFieldChange('eventType', type)}
+          />
+          {errors.eventType && <p className="mt-2 text-sm text-red-600">{errors.eventType}</p>}
         </div>
+
+        {/* Online Link - Show for ONLINE and HYBRID */}
+        {(formData.eventType === 'ONLINE' || formData.eventType === 'HYBRID') && (
+          <div>
+            <label htmlFor="onlineLink" className="block text-sm font-medium text-gray-700">
+              Online Link {(formData.eventType === 'ONLINE' || formData.eventType === 'HYBRID') ? '*' : ''}
+            </label>
+            <input
+              type="url"
+              id="onlineLink"
+              value={formData.onlineLink || ''}
+              onChange={(e) => handleFieldChange('onlineLink', e.target.value)}
+              placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors.onlineLink ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
+            {errors.onlineLink && <p className="mt-1 text-sm text-red-600">{errors.onlineLink}</p>}
+            <p className="mt-1 text-xs text-gray-500">Enter the URL for joining the online event</p>
+          </div>
+        )}
 
         {/* Start Date */}
         <div>
-          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
-            Start Date & Time *
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Event Date & Time *
           </label>
-          <input
-            type="datetime-local"
-            id="startDate"
-            value={formData.startDate}
-            onChange={(e) => handleDateChange('startDate', e.target.value)}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.startDate ? 'border-red-500' : 'border-gray-300'
-            }`}
+          <DateTimePicker
+            startDate={formData.startDate ? new Date(formData.startDate) : undefined}
+            endDate={formData.endDate ? new Date(formData.endDate) : undefined}
+            timezone={formData.timezone}
+            onDateTimeChange={handleDateTimeChange}
+            onError={(error) => setErrors(prev => ({ ...prev, dateTime: error }))}
+            timeInterval={15}
           />
           {errors.startDate && <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>}
-        </div>
-
-        {/* End Date */}
-        <div>
-          <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
-            End Date & Time *
-          </label>
-          <input
-            type="datetime-local"
-            id="endDate"
-            value={formData.endDate}
-            onChange={(e) => handleDateChange('endDate', e.target.value)}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.endDate ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
           {errors.endDate && <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>}
         </div>
 
-        {/* Location */}
-        <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-            Location *
-          </label>
-          <input
-            type="text"
-            id="location"
-            value={formData.location}
-            onChange={(e) => handleFieldChange('location', e.target.value)}
-            placeholder="Enter event location"
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.location ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
-          {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
-        </div>
+        {/* End Date */}
+
+        {/* Location - Show for IN_PERSON and HYBRID */}
+        {(formData.eventType === 'IN_PERSON' || formData.eventType === 'HYBRID') && (
+          <div>
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+              Location {(formData.eventType === 'IN_PERSON' || formData.eventType === 'HYBRID') ? '*' : ''}
+            </label>
+            <input
+              type="text"
+              id="location"
+              value={formData.location || ''}
+              onChange={(e) => handleFieldChange('location', e.target.value)}
+              placeholder="Enter event location or venue address"
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors.location ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
+            {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
+            <p className="mt-1 text-xs text-gray-500">Minimum 3 characters required</p>
+          </div>
+        )}
 
         {/* Capacity */}
         <div>

@@ -177,6 +177,16 @@ export function apiPut<T>(endpoint: string, data?: unknown): Promise<T> {
 }
 
 /**
+ * PATCH request
+ */
+export function apiPatch<T>(endpoint: string, data?: unknown): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
  * DELETE request
  */
 export function apiDelete<T>(endpoint: string, data?: unknown): Promise<T> {
@@ -184,4 +194,78 @@ export function apiDelete<T>(endpoint: string, data?: unknown): Promise<T> {
     method: 'DELETE',
     body: data ? JSON.stringify(data) : undefined,
   });
+}
+
+
+/**
+ * Event API client methods
+ * Validates: Requirements 8.1, 8.2, 8.7
+ */
+
+import type { UpdateEventRequest, EventResponse, ApiErrorResponse } from '../types/event-update';
+
+/**
+ * Update an existing event with partial or complete data
+ * 
+ * Handles:
+ * - Authentication headers (Bearer token)
+ * - Error responses (400, 401, 403, 404, 409, 500)
+ * - 409 Conflict responses for concurrent updates
+ * 
+ * @param eventId - UUID of the event to update
+ * @param updateData - Partial or complete event update data
+ * @returns Updated event object
+ * @throws Error with specific error code for different failure scenarios
+ * 
+ * Validates: Requirements 8.1, 8.2, 8.7
+ */
+export async function updateEvent(
+  eventId: string,
+  updateData: UpdateEventRequest
+): Promise<EventResponse> {
+  try {
+    const response = await apiPatch<EventResponse>(
+      `/events/${eventId}`,
+      updateData
+    );
+    return response;
+  } catch (error) {
+    // Parse error response to provide better error handling
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      // Handle specific error codes
+      if (errorMessage.includes('409')) {
+        const err = new Error('Concurrent update conflict detected');
+        (err as any).errorCode = 'CONFLICT';
+        throw err;
+      }
+      
+      if (errorMessage.includes('403')) {
+        const err = new Error('You do not have permission to update this event');
+        (err as any).errorCode = 'FORBIDDEN';
+        throw err;
+      }
+      
+      if (errorMessage.includes('401')) {
+        const err = new Error('Authentication required');
+        (err as any).errorCode = 'UNAUTHORIZED';
+        throw err;
+      }
+      
+      if (errorMessage.includes('404')) {
+        const err = new Error('Event not found');
+        (err as any).errorCode = 'NOT_FOUND';
+        throw err;
+      }
+      
+      if (errorMessage.includes('400')) {
+        const err = new Error('Validation failed');
+        (err as any).errorCode = 'VALIDATION_ERROR';
+        throw err;
+      }
+    }
+    
+    throw error;
+  }
 }

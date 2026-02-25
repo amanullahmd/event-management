@@ -1,46 +1,73 @@
-/**
- * Order type definitions for the Event Management & Ticketing System
- */
+export interface OrderItemResponse {
+  id: string;
+  ticketTypeId: string;
+  ticketTypeName: string;
+  quantity: number;
+  priceCents: number;
+  currency: string;
+}
 
-import type { OrderTicket } from './ticket';
+export interface OrderResponse {
+  id: string;
+  userId: string;
+  eventId: string;
+  status: string;
+  totalAmountCents: number;
+  currency: string;
+  stripePaymentIntentId?: string;
+  clientSecret?: string;
+  items: OrderItemResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfirmationResponse {
+  orderId: string;
+  orderDate: string;
+  orderStatus: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  attendeePhone: string;
+  items: OrderItemResponse[];
+  subtotal: number;
+  discountAmount: number;
+  total: number;
+  appliedPromoCode?: string;
+  eventName: string;
+  eventDate: string;
+  instructions: string;
+}
+
+export interface OrderTicketItem {
+  qrCode: string;
+  checkedIn: boolean;
+  quantity: number;
+  ticketTypeId: string;
+}
 
 export type OrderStatus = 'completed' | 'pending' | 'refunded' | 'cancelled';
-export type PaymentMethod = 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer';
-export type RefundStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 
 export interface Order {
   id: string;
   customerId: string;
   eventId: string;
-  tickets: OrderTicket[];
+  createdAt: Date;
   totalAmount: number;
   status: OrderStatus;
-  paymentMethod: PaymentMethod;
-  createdAt: Date;
-  updatedAt: Date;
+  paymentMethod: string;
+  tickets: OrderTicketItem[];
 }
+
+export type RefundStatus = 'pending' | 'approved' | 'rejected' | 'completed';
 
 export interface RefundRequest {
   id: string;
   orderId: string;
   customerId: string;
+  eventId: string;
+  amount: number;
   reason: string;
   status: RefundStatus;
-  amount: number;
   requestedAt: Date;
   processedAt?: Date;
-}
-
-export interface OrderSummary {
-  subtotal: number;
-  fees: number;
-  tax: number;
-  total: number;
-}
-
-export interface CheckinStats {
-  totalTickets: number;
-  checkedIn: number;
-  remaining: number;
-  checkinPercentage: number;
 }

@@ -15,3 +15,6 @@ export type { SocialProofBadgeProps } from './SocialProofBadge';
 
 export { EventCard } from './EventCard';
 export type { EventCardProps, ExtendedEvent } from './EventCard';
+
+export { EventTypeSelector } from './EventTypeSelector';
+export type { EventType } from './EventTypeSelector';

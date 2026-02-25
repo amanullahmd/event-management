@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getAllEvents } from '@/lib/dummy-data';
 import { useAuth } from '@/lib/context/AuthContext';
+import { StatusBadge } from '@/components/organizer/StatusBadge';
 import type { Event } from '@/lib/types';
 import { Calendar, MapPin, Users, Plus, Edit, BarChart3, Ticket, Eye } from 'lucide-react';
 
@@ -111,13 +112,17 @@ export default function OrganizerEventsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{event.name}</h3>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      event.status === 'active' 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                    }`}>
-                      {event.status}
-                    </span>
+                    <StatusBadge
+                      status={
+                        event.status === 'published'
+                          ? 'published'
+                          : event.status === 'unpublished'
+                          ? 'unpublished'
+                          : 'draft'
+                      }
+                      publishedAt={event.publishedAt}
+                      unpublishedAt={event.unpublishedAt}
+                    />
                   </div>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                     <span className="flex items-center gap-1">

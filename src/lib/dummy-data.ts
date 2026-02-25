@@ -330,7 +330,6 @@ function generateOrders(events: Event[]): Order[] {
         Math.floor(Math.random() * 12),
         Math.floor(Math.random() * 28) + 1
       ),
-      updatedAt: new Date(),
     });
   }
 
@@ -373,6 +372,7 @@ function generateRefunds(orders: Order[]): RefundRequest[] {
       id: `refund-${i + 1}`,
       orderId: order.id,
       customerId: order.customerId,
+      eventId: order.eventId,
       reason: 'Cannot attend event',
       status: ['pending', 'approved', 'rejected', 'completed'][
         Math.floor(Math.random() * 4)
@@ -637,7 +637,6 @@ export function updateOrderStatus(
   const order = dummyOrders.find((o) => o.id === orderId);
   if (order) {
     order.status = status;
-    order.updatedAt = new Date();
   }
   return order;
 }
@@ -674,11 +673,10 @@ export function createEvent(event: Omit<Event, 'id' | 'createdAt'>): Event {
 /**
  * Create new order
  */
-export function createOrder(order: Omit<Order, 'id' | 'updatedAt'>): Order {
+export function createOrder(order: Omit<Order, 'id'>): Order {
   const newOrder: Order = {
     ...order,
     id: `order-${dummyOrders.length + 1}`,
-    updatedAt: new Date(),
   };
   dummyOrders.push(newOrder);
 

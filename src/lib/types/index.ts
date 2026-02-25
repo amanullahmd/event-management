@@ -4,6 +4,7 @@
 
 export * from './user';
 export * from './event';
+export * from './event-update';
 export * from './ticket';
 export * from './order';
 export * from './api';

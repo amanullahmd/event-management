@@ -4,7 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getEventById, getOrdersByCustomerId, getAllOrders } from '@/lib/dummy-data';
 import { Button } from '@/components/ui/button';
+import { EventStatusSection } from '@/components/organizer/EventStatusSection';
 import Link from 'next/link';
+import type { Event } from '@/lib/types';
 
 /**
  * Event Details Page for Organizers
@@ -14,11 +16,18 @@ export default function EventDetailsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [activeTab, setActiveTab] = useState<'overview' | 'tickets' | 'analytics'>('overview');
+  const [event, setEvent] = useState<Event | null>(null);
 
   // Get event details
-  const event = useMemo(() => {
+  const eventData = useMemo(() => {
     return getEventById(eventId);
   }, [eventId]);
+
+  React.useEffect(() => {
+    if (eventData) {
+      setEvent(eventData);
+    }
+  }, [eventData]);
 
   // Get event orders
   const eventOrders = useMemo(() => {
@@ -26,6 +35,14 @@ export default function EventDetailsPage() {
     const allOrders = getAllOrders();
     return allOrders.filter((order) => order.eventId === event.id);
   }, [event]);
+
+  const handleStatusChange = (updatedEvent: Event) => {
+    setEvent(updatedEvent);
+  };
+
+  const handleStatusError = (error: string) => {
+    console.error('Status change error:', error);
+  };
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -103,6 +120,15 @@ export default function EventDetailsPage() {
           {event.description}
         </p>
       </div>
+
+      {/* Event Status Section */}
+      {event && (
+        <EventStatusSection
+          event={event}
+          onStatusChange={handleStatusChange}
+          onError={handleStatusError}
+        />
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -208,6 +234,35 @@ export default function EventDetailsPage() {
                         {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                       </dd>
                     </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-600 dark:text-slate-400">Event Type:</dt>
+                      <dd className="text-slate-900 dark:text-white font-medium">
+                        {event.eventType ? (
+                          event.eventType === 'ONLINE' ? 'Online' :
+                          event.eventType === 'IN_PERSON' ? 'In-Person' :
+                          event.eventType === 'HYBRID' ? 'Hybrid' :
+                          event.eventType
+                        ) : 'Not specified'}
+                      </dd>
+                    </div>
+                    {(event.eventType === 'ONLINE' || event.eventType === 'HYBRID') && event.onlineLink && (
+                      <div className="flex justify-between">
+                        <dt className="text-slate-600 dark:text-slate-400">Online Link:</dt>
+                        <dd className="text-slate-900 dark:text-white font-medium">
+                          <a href={event.onlineLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                            Join Online
+                          </a>
+                        </dd>
+                      </div>
+                    )}
+                    {(event.eventType === 'IN_PERSON' || event.eventType === 'HYBRID') && event.location && (
+                      <div className="flex justify-between">
+                        <dt className="text-slate-600 dark:text-slate-400">Location:</dt>
+                        <dd className="text-slate-900 dark:text-white font-medium">
+                          {event.location}
+                        </dd>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <dt className="text-slate-600 dark:text-slate-400">Category:</dt>
                       <dd className="text-slate-900 dark:text-white font-medium">
