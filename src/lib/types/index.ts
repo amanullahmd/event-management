@@ -8,3 +8,4 @@ export * from './event-update';
 export * from './ticket';
 export * from './order';
 export * from './api';
+export * from './organizer-trust-profiles';
