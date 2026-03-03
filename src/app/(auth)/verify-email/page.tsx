@@ -34,7 +34,7 @@ function VerifyEmailContent() {
     setMessage('');
 
     try {
-      const response = await apiPost('/api/auth/verify-email', { 
+      const response = await apiPost('/auth/verify-email', { 
         email, 
         code 
       });
@@ -63,7 +63,7 @@ function VerifyEmailContent() {
     setResendMessage('');
 
     try {
-      await apiPost('/api/auth/resend-verification-code', { email });
+      await apiPost('/auth/resend-verification-code', { email });
       setResendMessage('Verification code sent! Check your email.');
       setCode('');
       setStatus('idle');

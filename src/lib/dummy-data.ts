@@ -1,22 +1,8 @@
 /**
  * Dummy Data Module
  * 
- * This module provides mock data and CRUD operations for the Event Management
+ * This module provides mock data and CRUD operations for Event Management
  * & Ticketing System frontend. All data is stored in-memory and resets on page refresh.
- * 
- * ## Demo Credentials
- * 
- * ### Admin Account
- * - Email: admin@example.com
- * - Password: admin123
- * 
- * ### Organizer Account
- * - Email: organizer1@example.com
- * - Password: organizer123
- * 
- * ### Customer Account
- * - Email: customer1@example.com
- * - Password: customer123
  * 
  * ## Data Types
  * - Users: Admin, organizer, and customer accounts
@@ -107,16 +93,6 @@ function generateUsers(): User[] {
   ];
 
   const users: User[] = [];
-
-  // Create admin user
-  users.push({
-    id: 'admin-1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'admin',
-    status: 'active',
-    createdAt: new Date('2024-01-01'),
-  });
 
   // Create customer users
   for (let i = 0; i < 15; i++) {

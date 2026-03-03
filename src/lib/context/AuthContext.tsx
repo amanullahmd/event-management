@@ -139,9 +139,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Login error response:', errorData);
-        throw new Error(errorData.message || `Login failed with status ${response.status}`);
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If JSON parsing fails, try to get the response text for debugging
+          const responseText = await response.text();
+          console.error('Failed to parse error response as JSON. Response text:', responseText);
+          errorData = { message: `Login failed with status ${response.status}` };
+        }
+        // Extract the error message from the response
+        const errorMessage = errorData.message || `Login failed with status ${response.status}`;
+        console.error('Login error response:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -284,8 +294,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If JSON parsing fails, try to get the response text for debugging
+          const responseText = await response.text();
+          console.error('Failed to parse error response as JSON. Response text:', responseText);
+          errorData = { message: 'Registration failed' };
+        }
+        // Extract the error message from the response
+        const errorMessage = errorData.message || 'Registration failed';
+        console.error('Registration error response:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
