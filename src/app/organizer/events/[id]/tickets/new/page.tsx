@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getEventById } from '@/lib/dummy-data';
+import { getEventById, type Event } from '@/lib/services/apiService';
 import { TicketTypeForm } from '@/components/organizer/TicketTypeForm';
 
 /**
@@ -15,10 +15,25 @@ export default function CreateTicketTypePage() {
   const eventId = params.id as string;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get event details
-  const event = useMemo(() => {
-    return getEventById(eventId);
+  // Fetch event details
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setIsLoading(true);
+        const eventData = await getEventById(eventId);
+        setEvent(eventData || null);
+      } catch (error) {
+        console.error('Failed to fetch event:', error);
+        setEvent(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvent();
   }, [eventId]);
 
   // Handle form submission
@@ -69,6 +84,14 @@ export default function CreateTicketTypePage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-600 dark:text-slate-400">Loading event...</p>
+      </div>
+    );
+  }
 
   if (!event) {
     return (

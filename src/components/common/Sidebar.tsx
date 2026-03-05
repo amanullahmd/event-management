@@ -90,7 +90,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                       {title}
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {user?.role === 'admin' ? 'Admin Panel' : user?.role === 'organizer' ? 'Organizer Portal' : 'My Account'}
+                      {user?.role === 'ADMIN' ? 'Admin Panel' : user?.role === 'ORGANIZER' ? 'Organizer Portal' : 'My Account'}
                     </p>
                   </div>
                 </div>

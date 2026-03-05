@@ -1,10 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getOrdersByCustomerId, getEventById } from '@/lib/dummy-data';
-import type { Order, OrderStatus } from '@/lib/types';
+import { getOrdersByCustomerId, getEventById, getAllEvents } from '@/lib/services/apiService';
+import type { OrderStatus } from '@/lib/types';
+
+type AnyOrder = {
+  id: string;
+  eventId: string;
+  customerId: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  tickets: any[];
+};
 
 /**
  * Customer Orders Page
@@ -15,16 +25,42 @@ export default function OrdersPage() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
-  
-  // Get customer's orders
-  const orders = user ? getOrdersByCustomerId(user.id) : [];
-  
+  const [orders, setOrders] = useState<AnyOrder[]>([]);
+  const [eventNames, setEventNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchOrders = async () => {
+      try {
+        const data = await getOrdersByCustomerId(user.id);
+        const allOrders = (data || []) as AnyOrder[];
+        setOrders(allOrders);
+
+        // Pre-fetch event names for display
+        const uniqueEventIds = [...new Set(allOrders.map((o) => o.eventId))];
+        const eventResults = await Promise.all(uniqueEventIds.map((id) => getEventById(id)));
+        const nameMap: Record<string, string> = {};
+        uniqueEventIds.forEach((id, i) => {
+          const ev = eventResults[i] as any;
+          nameMap[id] = ev?.name || 'Unknown Event';
+          if (ev?.location) nameMap[`${id}__loc`] = ev.location;
+        });
+        setEventNames(nameMap);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      }
+    };
+
+    fetchOrders();
+  }, [user?.id]);
+
   // Filter orders by status
   const filteredOrders = orders.filter((order) => {
     if (statusFilter === 'all') return true;
     return order.status === statusFilter;
   });
-  
+
   // Sort orders
   const sortedOrders = [...filteredOrders].sort((a, b) => {
     if (sortBy === 'date') {
@@ -135,9 +171,7 @@ export default function OrdersPage() {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {sortedOrders.map((order) => {
-                  const event = getEventById(order.eventId);
-                  const ticketCount = order.tickets.reduce((sum, t) => sum + t.quantity, 0);
-                  
+                  const ticketCount = order.tickets?.length || 0;
                   return (
                     <tr
                       key={order.id}
@@ -155,10 +189,10 @@ export default function OrdersPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate max-w-[200px]">
-                              {event?.name || 'Unknown Event'}
+                              {eventNames[order.eventId] || 'Unknown Event'}
                             </p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {event?.location || 'Unknown Location'}
+                              {eventNames[`${order.eventId}__loc`] || ''}
                             </p>
                           </div>
                         </div>
@@ -187,7 +221,7 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <OrderStatusBadge status={order.status} />
+                        <OrderStatusBadge status={order.status as OrderStatus} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <Link

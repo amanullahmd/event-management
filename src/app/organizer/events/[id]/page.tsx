@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getOrdersByCustomerId, getAllOrders } from '@/lib/dummy-data';
+import { getEventById, getOrdersByCustomerId, getAllOrders, type Event as ApiEvent, type Order } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import { EventStatusSection } from '@/components/organizer/EventStatusSection';
 import Link from 'next/link';
@@ -16,28 +16,42 @@ export default function EventDetailsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [activeTab, setActiveTab] = useState<'overview' | 'tickets' | 'analytics'>('overview');
-  const [event, setEvent] = useState<Event | null>(null);
+  const [event, setEvent] = useState<ApiEvent | null>(null);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get event details
-  const eventData = useMemo(() => {
-    return getEventById(eventId);
+  // Fetch event and orders
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [eventData, orders] = await Promise.all([
+          getEventById(eventId),
+          getAllOrders()
+        ]);
+        setEvent(eventData || null);
+        setAllOrders(orders);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        setEvent(null);
+        setAllOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [eventId]);
-
-  React.useEffect(() => {
-    if (eventData) {
-      setEvent(eventData);
-    }
-  }, [eventData]);
 
   // Get event orders
   const eventOrders = useMemo(() => {
     if (!event) return [];
-    const allOrders = getAllOrders();
     return allOrders.filter((order) => order.eventId === event.id);
-  }, [event]);
+  }, [event, allOrders]);
 
   const handleStatusChange = (updatedEvent: Event) => {
-    setEvent(updatedEvent);
+    // Convert Event type to ApiEvent type if needed
+    setEvent(updatedEvent as any);
   };
 
   const handleStatusError = (error: string) => {
@@ -71,7 +85,7 @@ export default function EventDetailsPage() {
   };
 
   // Format date
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -80,6 +94,14 @@ export default function EventDetailsPage() {
       minute: '2-digit',
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-600 dark:text-slate-400">Loading event...</p>
+      </div>
+    );
+  }
 
   if (!event || !metrics) {
     return (
@@ -124,7 +146,7 @@ export default function EventDetailsPage() {
       {/* Event Status Section */}
       {event && (
         <EventStatusSection
-          event={event}
+          event={event as any}
           onStatusChange={handleStatusChange}
           onError={handleStatusError}
         />
@@ -237,25 +259,25 @@ export default function EventDetailsPage() {
                     <div className="flex justify-between">
                       <dt className="text-slate-600 dark:text-slate-400">Event Type:</dt>
                       <dd className="text-slate-900 dark:text-white font-medium">
-                        {event.eventType ? (
-                          event.eventType === 'ONLINE' ? 'Online' :
-                          event.eventType === 'IN_PERSON' ? 'In-Person' :
-                          event.eventType === 'HYBRID' ? 'Hybrid' :
-                          event.eventType
+                        {(event as any).eventType ? (
+                          (event as any).eventType === 'ONLINE' ? 'Online' :
+                          (event as any).eventType === 'IN_PERSON' ? 'In-Person' :
+                          (event as any).eventType === 'HYBRID' ? 'Hybrid' :
+                          (event as any).eventType
                         ) : 'Not specified'}
                       </dd>
                     </div>
-                    {(event.eventType === 'ONLINE' || event.eventType === 'HYBRID') && event.onlineLink && (
+                    {((event as any).eventType === 'ONLINE' || (event as any).eventType === 'HYBRID') && (event as any).onlineLink && (
                       <div className="flex justify-between">
                         <dt className="text-slate-600 dark:text-slate-400">Online Link:</dt>
                         <dd className="text-slate-900 dark:text-white font-medium">
-                          <a href={event.onlineLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          <a href={(event as any).onlineLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                             Join Online
                           </a>
                         </dd>
                       </div>
                     )}
-                    {(event.eventType === 'IN_PERSON' || event.eventType === 'HYBRID') && event.location && (
+                    {((event as any).eventType === 'IN_PERSON' || (event as any).eventType === 'HYBRID') && event.location && (
                       <div className="flex justify-between">
                         <dt className="text-slate-600 dark:text-slate-400">Location:</dt>
                         <dd className="text-slate-900 dark:text-white font-medium">

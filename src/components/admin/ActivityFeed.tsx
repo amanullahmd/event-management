@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { getRecentActivities } from '@/lib/dummy-data';
 
 interface Activity {
   id: string;
@@ -10,6 +9,31 @@ interface Activity {
   timestamp: Date;
   user: string;
 }
+
+// Mock data - replace with real API call later
+const mockActivities: Activity[] = [
+  {
+    id: 'activity-1',
+    type: 'user_registration',
+    description: 'New user registered',
+    timestamp: new Date(),
+    user: 'John Doe',
+  },
+  {
+    id: 'activity-2',
+    type: 'event_creation',
+    description: 'Event "Tech Conference 2024" was created',
+    timestamp: new Date(),
+    user: 'Jane Doe',
+  },
+  {
+    id: 'activity-3',
+    type: 'order_creation',
+    description: 'Order placed for event',
+    timestamp: new Date(),
+    user: 'John Smith',
+  },
+];
 
 interface ActivityFeedProps {
   limit?: number;
@@ -21,9 +45,10 @@ interface ActivityFeedProps {
  */
 export function ActivityFeed({ limit = 10 }: ActivityFeedProps) {
   const activities = useMemo(() => {
-    const rawActivities = getRecentActivities(limit);
+    // Use mock data instead of deleted dummy-data function
+    const rawActivities = mockActivities.slice(0, limit);
     // Ensure activities are sorted by timestamp descending (most recent first)
-    return rawActivities.sort((a, b) => {
+    return rawActivities.sort((a: Activity, b: Activity) => {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
       return timeB - timeA;

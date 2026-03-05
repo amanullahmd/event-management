@@ -12,16 +12,16 @@ export interface Event {
   organizerId: string;
   eventType?: string;
   onlineLink?: string;
-  date: Date;
+  date: Date | string;
   location: string;
   category: string;
-  image: string;
+  image?: string;
   status: EventStatus;
   ticketTypes: TicketType[];
   totalAttendees: number;
-  createdAt: Date;
-  publishedAt?: Date;
-  unpublishedAt?: Date;
+  createdAt: Date | string;
+  publishedAt?: Date | string;
+  unpublishedAt?: Date | string;
 }
 
 export interface TicketType {

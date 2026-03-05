@@ -2,12 +2,29 @@
 
 import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Ticket, Event, TicketType } from '@/lib/types';
 
+// Accept flexible types that work with both API and local types
 interface TicketCardProps {
-  ticket: Ticket;
-  event: Event;
-  ticketType?: TicketType;
+  ticket: {
+    id: string;
+    qrCode: string;
+    checkedIn: boolean;
+    checkedInAt?: string | Date;
+    ticketTypeId: string;
+    status?: string;
+  };
+  event: {
+    id: string;
+    name: string;
+    date: string | Date;
+    location: string;
+    image?: string;
+  };
+  ticketType?: {
+    id: string;
+    name: string;
+    price: number;
+  };
   attendeeName: string;
 }
 

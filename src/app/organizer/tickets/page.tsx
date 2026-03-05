@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks';
-import { getEventsByOrganizerId } from '@/lib/dummy-data';
+import { getEventsByOrganizerId } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { TicketType } from '@/lib/types';
@@ -19,31 +19,52 @@ interface TicketTypeWithEvent extends TicketType {
 export default function TicketManagementPage() {
   const { user } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [organizerEvents, setOrganizerEvents] = useState<any[]>([]);
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeWithEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    return getEventsByOrganizerId(user.id);
+  // Load organizer's events
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (!user) {
+        setOrganizerEvents([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        const events = await getEventsByOrganizerId(user.id);
+        setOrganizerEvents(events);
+      } catch (error) {
+        console.error('Failed to load events:', error);
+        setOrganizerEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEvents();
   }, [user]);
 
-  // Get ticket types for selected event or all events
-  const ticketTypes = useMemo(() => {
+  // Update ticket types when events or filter changes
+  useEffect(() => {
     if (selectedEventId) {
       const event = organizerEvents.find((e) => e.id === selectedEventId);
-      return (event?.ticketTypes || []).map((tt) => ({
+      const types = (event?.ticketTypes || []).map((tt: any) => ({
         ...tt,
         eventName: event?.name || '',
         eventId: event?.id || '',
       })) as TicketTypeWithEvent[];
+      setTicketTypes(types);
+    } else {
+      // Return all ticket types from all events
+      const types = organizerEvents.flatMap((event) =>
+        (event.ticketTypes || []).map((tt: any) => ({
+          ...tt,
+          eventName: event.name,
+          eventId: event.id,
+        }))
+      ) as TicketTypeWithEvent[];
+      setTicketTypes(types);
     }
-    // Return all ticket types from all events
-    return organizerEvents.flatMap((event) =>
-      event.ticketTypes.map((tt) => ({
-        ...tt,
-        eventName: event.name,
-        eventId: event.id,
-      }))
-    ) as TicketTypeWithEvent[];
   }, [organizerEvents, selectedEventId]);
 
   // Format currency

@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks';
 import { 
   getEventsByOrganizerId, 
   updateTicketCheckIn, 
-  getTicketByQrCode,
   getTicketsByEventId,
   getEventById,
   getUserById
-} from '@/lib/dummy-data';
+} from '@/lib/services/apiService';
+import { getTicketByQrCode } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { Ticket, Event } from '@/lib/types';
+
+type Event = Awaited<ReturnType<typeof getEventsByOrganizerId>>[number];
+type Ticket = Awaited<ReturnType<typeof getTicketsByEventId>>[number];
 
 interface CheckInResult {
   success: boolean;
@@ -34,26 +36,56 @@ export default function CheckinPage() {
   const [checkInResult, setCheckInResult] = useState<CheckInResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentCheckIns, setRecentCheckIns] = useState<CheckInResult[]>([]);
+  const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
+  const [checkInStats, setCheckInStats] = useState({ total: 0, checkedIn: 0, percentage: 0 });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    return getEventsByOrganizerId(user.id).filter(e => e.status === 'active');
+  // Fetch organizer's events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const events = await getEventsByOrganizerId(user.id);
+        setOrganizerEvents(events.filter(e => e.status === 'active'));
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
   }, [user]);
 
-  // Get check-in statistics for selected event
-  const checkInStats = useMemo(() => {
-    if (!selectedEventId) return { total: 0, checkedIn: 0, percentage: 0 };
-    
-    const tickets = getTicketsByEventId(selectedEventId);
-    const checkedIn = tickets.filter(t => t.checkedIn).length;
-    const total = tickets.length;
-    
-    return {
-      total,
-      checkedIn,
-      percentage: total > 0 ? Math.round((checkedIn / total) * 100) : 0,
+  // Fetch check-in statistics for selected event
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!selectedEventId) {
+        setCheckInStats({ total: 0, checkedIn: 0, percentage: 0 });
+        return;
+      }
+      
+      try {
+        const tickets = await getTicketsByEventId(selectedEventId);
+        const checkedIn = tickets.filter(t => t.checkedIn).length;
+        const total = tickets.length;
+        
+        setCheckInStats({
+          total,
+          checkedIn,
+          percentage: total > 0 ? Math.round((checkedIn / total) * 100) : 0,
+        });
+      } catch (error) {
+        console.error('Failed to fetch check-in stats:', error);
+      }
     };
+
+    fetchStats();
   }, [selectedEventId]);
 
   // Handle QR code scan
@@ -69,7 +101,7 @@ export default function CheckinPage() {
     setIsProcessing(true);
 
     try {
-      const ticket = getTicketByQrCode(qrInput);
+      const ticket = await getTicketByQrCode(qrInput);
       
       if (!ticket) {
         setCheckInResult({
@@ -89,17 +121,19 @@ export default function CheckinPage() {
         return;
       }
 
-      updateTicketCheckIn(ticket.id, true);
+      await updateTicketCheckIn(ticket.id, true);
 
-      const event = getEventById(ticket.eventId);
-      const user = getUserById(ticket.id);
+      const [event, ticketUser] = await Promise.all([
+        getEventById(ticket.eventId),
+        getUserById(ticket.id)
+      ]);
 
       const result: CheckInResult = {
         success: true,
         message: 'Check-in successful!',
         ticket,
         event,
-        attendeeName: user?.name || 'Guest',
+        attendeeName: ticketUser?.name || 'Guest',
       };
 
       setCheckInResult(result);

@@ -1,14 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import {
-  getAllOrders,
-  getUserById,
-  getEventById,
-  updateOrderStatus,
-  getOrderById,
-} from '@/lib/dummy-data';
-import { Order } from '@/lib/types/order';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getAllOrders, getOrderById, updateOrderStatus, getAllUsers, getAllEvents, getUserById, getEventById } from '@/lib/services/apiService';
+import type { Order } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -43,13 +37,34 @@ import {
  * Allows admin to view order details and process refunds
  */
 export default function OrderManagementPage() {
-  const [orders, setOrders] = useState<Order[]>(getAllOrders());
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [ordersData, usersData, eventsData] = await Promise.all([
+          getAllOrders(),
+          getAllUsers(),
+          getAllEvents()
+        ]);
+        setOrders(ordersData);
+        setUsers(usersData);
+        setEvents(eventsData);
+      } catch (error) {
+        console.error('Error fetching order management data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter orders based on search term
   const filteredOrders = useMemo(() => {
@@ -119,7 +134,7 @@ export default function OrderManagementPage() {
   };
 
   // Format date
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -183,8 +198,8 @@ export default function OrderManagementPage() {
               </TableRow>
             ) : (
               paginatedOrders.map((order) => {
-                const customer = getUserById(order.customerId);
-                const event = getEventById(order.eventId);
+                const customer = users.find((u: any) => u.id === order.customerId);
+                const event = events.find((e: any) => e.id === order.eventId);
                 return (
                   <TableRow
                     key={order.id}
@@ -324,7 +339,7 @@ export default function OrderManagementPage() {
                   Customer Information
                 </h3>
                 {(() => {
-                  const customer = getUserById(selectedOrder.customerId);
+                  const customer = users.find((u) => u.id === selectedOrder.customerId);
                   return (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -354,7 +369,7 @@ export default function OrderManagementPage() {
                   Event Information
                 </h3>
                 {(() => {
-                  const event = getEventById(selectedOrder.eventId);
+                  const event = events.find((e) => e.id === selectedOrder.eventId);
                   return (
                     <div className="grid grid-cols-2 gap-4">
                       <div>

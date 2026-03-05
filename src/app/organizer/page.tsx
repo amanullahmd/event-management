@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks';
-import { getAllEvents, getAllOrders } from '@/lib/dummy-data';
+import { getAllEvents, getAllOrders, type Event, type Order } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -12,21 +12,44 @@ import Link from 'next/link';
  */
 export default function OrganizerDashboard() {
   const { user } = useAuth();
+  const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
+  const [organizerOrders, setOrganizerOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    const allEvents = getAllEvents();
-    return allEvents.filter((event) => event.organizerId === user.id);
+  // Fetch organizer's events and orders
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setOrganizerEvents([]);
+        setOrganizerOrders([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const [allEvents, allOrders] = await Promise.all([
+          getAllEvents(),
+          getAllOrders()
+        ]);
+        
+        const events = allEvents.filter((event) => event.organizerId === user.id);
+        const eventIds = events.map((e) => e.id);
+        const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
+        
+        setOrganizerEvents(events);
+        setOrganizerOrders(orders);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        setOrganizerEvents([]);
+        setOrganizerOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [user]);
-
-  // Get organizer's orders
-  const organizerOrders = useMemo(() => {
-    if (!user) return [];
-    const allOrders = getAllOrders();
-    const eventIds = organizerEvents.map((e) => e.id);
-    return allOrders.filter((order) => eventIds.includes(order.eventId));
-  }, [user, organizerEvents]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -52,7 +75,7 @@ export default function OrganizerDashboard() {
   };
 
   // Format date
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',

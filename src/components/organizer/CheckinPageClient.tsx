@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/hooks';
 import { 
   getEventsByOrganizerId, 
   updateTicketCheckIn, 
-  getTicketByQrCode,
   getTicketsByEventId,
+  getTicketByQrCode,
   getEventById,
   getUserById
-} from '@/lib/dummy-data';
+} from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Ticket, Event } from '@/lib/types';
@@ -34,26 +34,56 @@ export default function CheckinPageClient() {
   const [checkInResult, setCheckInResult] = useState<CheckInResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recentCheckIns, setRecentCheckIns] = useState<CheckInResult[]>([]);
+  const [organizerEvents, setOrganizerEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkInStats, setCheckInStats] = useState({ total: 0, checkedIn: 0, percentage: 0 });
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    return getEventsByOrganizerId(user.id).filter(e => e.status === 'active');
+  // Load organizer's events
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (!user) {
+        setOrganizerEvents([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        const events = await getEventsByOrganizerId(user.id);
+        const activeEvents = events.filter((e: any) => e.status === 'active');
+        setOrganizerEvents(activeEvents);
+      } catch (error) {
+        console.error('Failed to load events:', error);
+        setOrganizerEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEvents();
   }, [user]);
 
-  // Get check-in statistics for selected event
-  const checkInStats = useMemo(() => {
-    if (!selectedEventId) return { total: 0, checkedIn: 0, percentage: 0 };
-    
-    const tickets = getTicketsByEventId(selectedEventId);
-    const checkedIn = tickets.filter(t => t.checkedIn).length;
-    const total = tickets.length;
-    
-    return {
-      total,
-      checkedIn,
-      percentage: total > 0 ? Math.round((checkedIn / total) * 100) : 0,
+  // Load check-in statistics for selected event
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!selectedEventId) {
+        setCheckInStats({ total: 0, checkedIn: 0, percentage: 0 });
+        return;
+      }
+      
+      try {
+        const tickets = await getTicketsByEventId(selectedEventId);
+        const checkedIn = tickets.filter(t => t.checkedIn).length;
+        const total = tickets.length;
+        
+        setCheckInStats({
+          total,
+          checkedIn,
+          percentage: total > 0 ? Math.round((checkedIn / total) * 100) : 0,
+        });
+      } catch (error) {
+        console.error('Failed to load tickets:', error);
+        setCheckInStats({ total: 0, checkedIn: 0, percentage: 0 });
+      }
     };
+    loadStats();
   }, [selectedEventId]);
 
   // Handle QR code scan
@@ -69,8 +99,8 @@ export default function CheckinPageClient() {
     setIsProcessing(true);
 
     try {
-      // Simulate QR code processing
-      const ticket = getTicketByQrCode(qrInput);
+      // Get ticket by QR code
+      const ticket = await getTicketByQrCode(qrInput);
       
       if (!ticket) {
         setCheckInResult({
@@ -91,16 +121,16 @@ export default function CheckinPageClient() {
       }
 
       // Update ticket check-in status
-      updateTicketCheckIn(ticket.id, true);
+      await updateTicketCheckIn(ticket.id, true);
 
-      const event = getEventById(ticket.eventId);
-      const user = getUserById(ticket.id);
+      const event = await getEventById(ticket.eventId);
+      const user = await getUserById(ticket.id);
 
       const result: CheckInResult = {
         success: true,
         message: 'Check-in successful!',
-        ticket,
-        event,
+        ticket: ticket as any,
+        event: event as any,
         attendeeName: user?.name || 'Guest',
       };
 

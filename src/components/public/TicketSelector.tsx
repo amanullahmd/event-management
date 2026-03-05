@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Minus, Plus, ShoppingCart, Sparkles, Clock, Ticket } from 'lucide-react';
-import type { TicketType } from '@/lib/types';
+import type { TicketType } from '@/lib/services/apiService';
 
 interface TicketSelectorProps {
   ticketTypes: TicketType[];

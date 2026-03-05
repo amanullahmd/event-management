@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getOrganizerById } from '@/lib/dummy-data';
+import { getOrganizerById } from '@/lib/services/apiService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Phone, Building2, MapPin, Globe, Shield, Bell, Trash2 } from 'lucide-react';
@@ -23,14 +23,13 @@ export default function OrganizerProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
-  const organizer = user ? getOrganizerById(user.id) : null;
+  const [organizer, setOrganizer] = useState<any>(null);
 
   const [profile, setProfile] = useState<OrganizerProfile>({
     name: user?.name || '',
     email: user?.email || '',
     phone: '+1 (555) 987-6543',
-    businessName: organizer?.businessName || 'My Events Company',
+    businessName: 'My Events Company',
     businessAddress: '456 Event Plaza, Suite 100',
     website: 'https://myevents.com',
     description: 'Professional event organizer specializing in tech conferences and workshops.',
@@ -44,6 +43,20 @@ export default function OrganizerProfilePage() {
   });
 
   useEffect(() => {
+    const fetchOrganizer = async () => {
+      if (user) {
+        try {
+          const organizerData = await getOrganizerById(user.id);
+          setOrganizer(organizerData);
+        } catch (error) {
+          console.error('Failed to fetch organizer:', error);
+        }
+      }
+    };
+    fetchOrganizer();
+  }, [user]);
+
+  useEffect(() => {
     if (user) {
       setProfile(prev => ({
         ...prev,
@@ -54,7 +67,7 @@ export default function OrganizerProfilePage() {
     if (organizer) {
       setProfile(prev => ({
         ...prev,
-        businessName: organizer.businessName,
+        businessName: organizer.businessName || 'My Events Company',
       }));
     }
   }, [user, organizer]);

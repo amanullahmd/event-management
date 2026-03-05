@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 id: data.id,
                 name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
-                role: data.role.toLowerCase() as UserRole,
+                role: data.role.toUpperCase() as UserRole,
                 status: 'active' as const,
                 createdAt: new Date(),
               };
@@ -161,18 +161,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_refresh_token', data.refreshToken);
       localStorage.setItem('auth_user_id', data.id);
-      localStorage.setItem('auth_user_role', data.role.toLowerCase());
-      
+      localStorage.setItem('auth_user_role', data.role.toUpperCase());
+
       // Store token expiration time (15 minutes from now)
       const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
       localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
-      
+
       // Create user object from response
       const user: User = {
         id: data.id,
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
-        role: data.role.toLowerCase() as UserRole,
+        role: data.role.toUpperCase() as UserRole,
         status: 'active' as const,
         createdAt: new Date(),
       };
@@ -315,18 +315,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_refresh_token', data.refreshToken);
       localStorage.setItem('auth_user_id', data.id);
-      localStorage.setItem('auth_user_role', data.role.toLowerCase());
-      
+      localStorage.setItem('auth_user_role', data.role.toUpperCase());
+
       // Store token expiration time
       const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
       localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
-      
+
       // Create user object from response
       const user: User = {
         id: data.id,
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
-        role: data.role.toLowerCase() as UserRole,
+        role: data.role.toUpperCase() as UserRole,
         status: 'active' as const,
         createdAt: new Date(),
       };

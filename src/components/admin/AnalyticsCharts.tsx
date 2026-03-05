@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { getAllEvents, getAllOrders } from '@/lib/dummy-data';
+import { getAllEvents, getAllOrders } from '@/lib/services/apiService';
+import type { Event, Order } from '@/lib/services/apiService';
 
 // Lazy load recharts components to reduce initial bundle
 const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), { ssr: false });
@@ -21,13 +22,37 @@ const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ defa
  * Displays event trends and revenue trends over time
  */
 export const AnalyticsCharts = memo(function AnalyticsCharts() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [eventsData, ordersData] = await Promise.all([
+          getAllEvents(),
+          getAllOrders()
+        ]);
+        setEvents(eventsData);
+        setOrders(ordersData);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const eventTrendsData = useMemo(() => {
-    const events = getAllEvents();
+    if (events.length === 0) return [];
     
     // Group events by month
     const monthlyData: Record<string, number> = {};
     
-    events.forEach((event) => {
+    events.forEach((event: Event) => {
       const date = new Date(event.createdAt);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
@@ -47,12 +72,12 @@ export const AnalyticsCharts = memo(function AnalyticsCharts() {
   }, []);
 
   const revenueTrendsData = useMemo(() => {
-    const orders = getAllOrders();
+    if (orders.length === 0) return [];
     
     // Group revenue by month
     const monthlyRevenue: Record<string, number> = {};
     
-    orders.forEach((order) => {
+    orders.forEach((order: Order) => {
       const date = new Date(order.createdAt);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + order.totalAmount;
@@ -74,6 +99,15 @@ export const AnalyticsCharts = memo(function AnalyticsCharts() {
   const totalEvents = useMemo(() => eventTrendsData.reduce((sum, d) => sum + d.events, 0), [eventTrendsData]);
   const totalRevenue = useMemo(() => revenueTrendsData.reduce((sum, d) => sum + d.revenue, 0), [revenueTrendsData]);
   const avgRevenuePerEvent = useMemo(() => totalEvents > 0 ? totalRevenue / totalEvents : 0, [totalEvents, totalRevenue]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-t-2 border-indigo-600"></div>
+        <p className="mt-2 text-slate-600">Loading analytics...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

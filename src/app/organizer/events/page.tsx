@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { getAllEvents } from '@/lib/dummy-data';
+import { getAllEvents, type Event } from '@/lib/services/apiService';
 import { useAuth } from '@/lib/context/AuthContext';
 import { StatusBadge } from '@/components/organizer/StatusBadge';
-import type { Event } from '@/lib/types';
 import { Calendar, MapPin, Users, Plus, Edit, BarChart3, Ticket, Eye } from 'lucide-react';
 
 export default function OrganizerEventsPage() {
@@ -16,15 +15,26 @@ export default function OrganizerEventsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get events for this organizer (using organizer-1 as default for demo)
-    const organizerId = user?.id || 'organizer-1';
-    const allEvents = getAllEvents();
-    const organizerEvents = allEvents.filter(e => e.organizerId === organizerId);
-    setEvents(organizerEvents);
-    setIsLoading(false);
+    const fetchEvents = async () => {
+      try {
+        setIsLoading(true);
+        // Get events for this organizer (using organizer-1 as default for demo)
+        const organizerId = user?.id || 'organizer-1';
+        const allEvents = await getAllEvents();
+        const organizerEvents = allEvents.filter(e => e.organizerId === organizerId);
+        setEvents(organizerEvents);
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+        setEvents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
   }, [user]);
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
@@ -114,14 +124,14 @@ export default function OrganizerEventsPage() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{event.name}</h3>
                     <StatusBadge
                       status={
-                        event.status === 'published'
+                        event.status === 'active'
                           ? 'published'
-                          : event.status === 'unpublished'
+                          : event.status === 'inactive'
                           ? 'unpublished'
                           : 'draft'
                       }
-                      publishedAt={event.publishedAt}
-                      unpublishedAt={event.unpublishedAt}
+                      publishedAt={(event as any).publishedAt}
+                      unpublishedAt={(event as any).unpublishedAt}
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300">

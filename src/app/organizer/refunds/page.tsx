@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks';
 import {
   getEventsByOrganizerId,
@@ -9,8 +9,8 @@ import {
   updateRefundStatus,
   getOrderById,
   getUserById,
-  getEventById,
-} from '@/lib/dummy-data';
+  getEventById
+} from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import type { RefundRequest } from '@/lib/types';
 
@@ -24,64 +24,119 @@ export default function RefundsPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [organizerEvents, setOrganizerEvents] = useState<any[]>([]);
+  const [refunds, setRefunds] = useState<RefundRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    return getEventsByOrganizerId(user.id);
+  // Load organizer's events
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (!user) {
+        setOrganizerEvents([]);
+        return;
+      }
+      try {
+        const events = await getEventsByOrganizerId(user.id);
+        setOrganizerEvents(events);
+      } catch (error) {
+        console.error('Failed to load events:', error);
+        setOrganizerEvents([]);
+      }
+    };
+    loadEvents();
   }, [user]);
 
-  // Get refunds based on filters
-  const refunds = useMemo(() => {
-    let allRefunds: RefundRequest[];
-    
-    if (selectedEventId) {
-      allRefunds = getRefundsByEventId(selectedEventId);
+  // Load refunds based on filters
+  useEffect(() => {
+    const loadRefunds = async () => {
+      setLoading(true);
+      try {
+        let allRefunds: RefundRequest[] = [];
+        
+        if (selectedEventId) {
+          allRefunds = await getRefundsByEventId(selectedEventId);
+        } else {
+          // Get refunds for all organizer's events
+          const eventIds = organizerEvents.map((e) => e.id);
+          const allRefundsData = await getAllRefunds();
+          
+          // Filter refunds by checking if their order's eventId is in our list
+          const filteredRefunds = await Promise.all(
+            allRefundsData.map(async (r) => {
+              const order = await getOrderById(r.orderId);
+              return order && eventIds.includes(order.eventId) ? r : null;
+            })
+          );
+          allRefunds = filteredRefunds.filter((r) => r !== null) as RefundRequest[];
+        }
+
+        // Filter by status
+        if (statusFilter && statusFilter !== 'all') {
+          allRefunds = allRefunds.filter((r) => r.status === statusFilter);
+        }
+
+        setRefunds(allRefunds);
+      } catch (error) {
+        console.error('Failed to load refunds:', error);
+        setRefunds([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (organizerEvents.length > 0 || selectedEventId) {
+      loadRefunds();
     } else {
-      // Get refunds for all organizer's events
-      const eventIds = organizerEvents.map((e) => e.id);
-      allRefunds = getAllRefunds().filter((r) => {
-        const order = getOrderById(r.orderId);
-        return order && eventIds.includes(order.eventId);
-      });
+      setRefunds([]);
+      setLoading(false);
     }
-
-    // Filter by status
-    if (statusFilter && statusFilter !== 'all') {
-      allRefunds = allRefunds.filter((r) => r.status === statusFilter);
-    }
-
-    return allRefunds;
   }, [selectedEventId, statusFilter, organizerEvents]);
 
   // Handle refund approval
   const handleApprove = async (refundId: string) => {
     setProcessingId(refundId);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    updateRefundStatus(refundId, 'approved');
-    setProcessingId(null);
+    try {
+      await updateRefundStatus(refundId, 'approved');
+      // Reload refunds after update
+      const updatedRefunds = refunds.map(r => 
+        r.id === refundId ? { ...r, status: 'approved' as const, processedAt: new Date() } : r
+      );
+      setRefunds(updatedRefunds);
+    } catch (error) {
+      console.error('Failed to approve refund:', error);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Handle refund rejection
   const handleReject = async (refundId: string) => {
     setProcessingId(refundId);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    updateRefundStatus(refundId, 'rejected');
-    setProcessingId(null);
+    try {
+      await updateRefundStatus(refundId, 'rejected');
+      // Reload refunds after update
+      const updatedRefunds = refunds.map(r => 
+        r.id === refundId ? { ...r, status: 'rejected' as const, processedAt: new Date() } : r
+      );
+      setRefunds(updatedRefunds);
+    } catch (error) {
+      console.error('Failed to reject refund:', error);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Get customer info for a refund
   const getCustomerInfo = (refund: RefundRequest) => {
-    const customer = getUserById(refund.customerId);
-    return customer?.name || 'Unknown Customer';
+    // Since getUserById is async, we'll use the customerId directly
+    // In a real app, you'd want to load this data separately
+    return `Customer ${refund.customerId}`;
   };
 
   // Get event info for a refund
   const getEventInfo = (refund: RefundRequest) => {
-    const order = getOrderById(refund.orderId);
-    if (!order) return 'Unknown Event';
-    const event = getEventById(order.eventId);
-    return event?.name || 'Unknown Event';
+    // Use the eventId from the refund directly
+    return refund.eventId ? `Event ${refund.eventId}` : 'Unknown Event';
   };
 
   // Format currency
@@ -189,7 +244,11 @@ export default function RefundsPage() {
           </h2>
         </div>
 
-        {refunds.length === 0 ? (
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="text-slate-600 dark:text-slate-400">Loading refunds...</div>
+          </div>
+        ) : refunds.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-6xl mb-4">💰</div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">

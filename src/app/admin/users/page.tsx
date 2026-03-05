@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { getAllUsers, updateUserStatus, updateUserRole } from '@/lib/dummy-data';
-import type { User } from '@/lib/types';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { getAllUsers, updateUserStatus, updateUserRole } from '@/lib/services/apiService';
+import type { User, UserRole } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -36,7 +36,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const ITEMS_PER_PAGE = 10;
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>(getAllUsers());
+  const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -46,6 +46,15 @@ export default function UserManagementPage() {
     type: 'block' | 'unblock' | 'promote';
     userId: string;
   } | null>(null);
+
+  // Fetch users on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const data = await getAllUsers();
+      setUsers(data as unknown as User[]);
+    };
+    fetchUsers();
+  }, []);
 
   // Filter users based on search term
   const filteredUsers = useMemo(() => {
@@ -96,8 +105,8 @@ export default function UserManagementPage() {
           updateUserStatus(user.id, 'active');
           return { ...user, status: 'active' as const };
         } else if (pendingAction.type === 'promote') {
-          updateUserRole(user.id, 'organizer');
-          return { ...user, role: 'organizer' as const };
+          updateUserRole(user.id, 'ORGANIZER');
+          return { ...user, role: 'ORGANIZER' as UserRole };
         }
       }
       return user;
@@ -197,7 +206,7 @@ export default function UserManagementPage() {
                 <TableCell>{getRoleBadge(user.role)}</TableCell>
                 <TableCell>{getStatusBadge(user.status)}</TableCell>
                 <TableCell className="text-sm text-gray-600">
-                  {user.createdAt.toLocaleDateString()}
+                  {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
@@ -241,7 +250,7 @@ export default function UserManagementPage() {
                                 Registered
                               </label>
                               <p className="text-gray-700">
-                                {selectedUser.createdAt.toLocaleDateString()}
+                                {new Date(selectedUser.createdAt).toLocaleDateString()}
                               </p>
                             </div>
                             <div className="flex gap-2 pt-4">
@@ -266,7 +275,7 @@ export default function UserManagementPage() {
                                   Unblock User
                                 </Button>
                               )}
-                              {selectedUser.role === 'customer' && (
+                              {selectedUser.role === 'CUSTOMER' && (
                                 <Button
                                   onClick={() => {
                                     handlePromoteUser(selectedUser.id);

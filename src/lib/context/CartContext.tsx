@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import type { TicketType } from '../types/event';
+import type { TicketType } from '../services/apiService';
 
 /**
  * Cart item representing a ticket type with quantity

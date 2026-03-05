@@ -44,9 +44,9 @@ export function Header() {
   const getDashboardLink = () => {
     if (!user) return '/';
     switch (user.role) {
-      case 'admin': return '/admin';
-      case 'organizer': return '/organizer';
-      case 'customer': return '/dashboard';
+      case 'ADMIN': return '/admin';
+      case 'ORGANIZER': return '/organizer';
+      case 'CUSTOMER': return '/dashboard';
       default: return '/';
     }
   };
@@ -54,9 +54,9 @@ export function Header() {
   const getRoleLabel = () => {
     if (!user) return '';
     switch (user.role) {
-      case 'admin': return 'Administrator';
-      case 'organizer': return 'Event Organizer';
-      case 'customer': return 'Customer';
+      case 'ADMIN': return 'Administrator';
+      case 'ORGANIZER': return 'Event Organizer';
+      case 'CUSTOMER': return 'Customer';
       default: return '';
     }
   };
@@ -88,7 +88,7 @@ export function Header() {
               >
                 Find Events
               </Link>
-              {isAuthenticated && user?.role === 'organizer' && (
+              {isAuthenticated && user?.role === 'ORGANIZER' && (
                 <Link 
                   href="/organizer/events" 
                   className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors"
@@ -96,7 +96,7 @@ export function Header() {
                   My Events
                 </Link>
               )}
-              {isAuthenticated && user?.role === 'admin' && (
+              {isAuthenticated && user?.role === 'ADMIN' && (
                 <Link 
                   href="/admin" 
                   className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors"
@@ -119,7 +119,7 @@ export function Header() {
             {isAuthenticated ? (
               <>
                 {/* Create Event Button - For Organizers */}
-                {user?.role === 'organizer' && (
+                {user?.role === 'ORGANIZER' && (
                   <Link href="/organizer/events/new" className="hidden sm:flex">
                     <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
                       <Plus className="w-4 h-4 mr-1.5" />
@@ -162,7 +162,7 @@ export function Header() {
                           <LayoutDashboard className="w-4 h-4 text-gray-400" />
                           Dashboard
                         </Link>
-                        {user?.role === 'customer' && (
+                        {user?.role === 'CUSTOMER' && (
                           <Link 
                             href="/dashboard/tickets" 
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" 
@@ -172,7 +172,7 @@ export function Header() {
                             My Tickets
                           </Link>
                         )}
-                        {user?.role === 'organizer' && (
+                        {user?.role === 'ORGANIZER' && (
                           <Link 
                             href="/organizer/events" 
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" 
@@ -251,7 +251,7 @@ export function Header() {
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </Link>
-                {user?.role === 'customer' && (
+                {user?.role === 'CUSTOMER' && (
                   <Link 
                     href="/dashboard/tickets" 
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors" 
@@ -261,7 +261,7 @@ export function Header() {
                     My Tickets
                   </Link>
                 )}
-                {user?.role === 'organizer' && (
+                {user?.role === 'ORGANIZER' && (
                   <>
                     <Link 
                       href="/organizer/events" 

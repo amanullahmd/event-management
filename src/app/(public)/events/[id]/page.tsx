@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TicketSelector } from '@/components/public/TicketSelector';
-import { getEventById } from '@/lib/dummy-data';
-import { mockLandingEvents } from '@/lib/mock-landing-data';
+import { getEventById } from '@/lib/services/apiService';
 import { useCart } from '@/lib/context/CartContext';
-import type { Event, TicketType } from '@/lib/types';
+import type { Event, TicketType } from '@/lib/services/apiService';
 import { 
   Calendar, 
   MapPin, 
@@ -33,17 +32,21 @@ export default function EventDetailsPage() {
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
-    if (params.id) {
-      // Try to get from dummy data first, then from mock landing data
-      let eventData = getEventById(params.id as string);
-      if (!eventData) {
-        eventData = mockLandingEvents.find(e => e.id === params.id);
+    const loadEvent = async () => {
+      if (params.id) {
+        try {
+          const eventData = await getEventById(params.id as string);
+          if (eventData) {
+            setEvent(eventData);
+          }
+        } catch (error) {
+          console.error('Error loading event:', error);
+        }
+        setIsLoading(false);
       }
-      if (eventData) {
-        setEvent(eventData);
-      }
-      setIsLoading(false);
-    }
+    };
+
+    loadEvent();
   }, [params.id]);
 
   const handleAddToCart = (ticketType: TicketType, quantity: number) => {
@@ -54,7 +57,7 @@ export default function EventDetailsPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -63,9 +66,9 @@ export default function EventDetailsPage() {
     });
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleTimeString('en-US', {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
       hour12: true,
     });

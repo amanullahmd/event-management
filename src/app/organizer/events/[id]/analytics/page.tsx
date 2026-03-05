@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getAllOrders } from '@/lib/dummy-data';
+import { getEventById, getAllOrders, type Order, type Event } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -13,18 +13,38 @@ export default function EventAnalyticsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('all');
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get event details
-  const event = useMemo(() => {
-    return getEventById(eventId);
+  // Fetch event and orders on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [eventData, orders] = await Promise.all([
+          getEventById(eventId),
+          getAllOrders()
+        ]);
+        setEvent(eventData || null);
+        setAllOrders(orders);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        setEvent(null);
+        setAllOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [eventId]);
 
   // Get event orders
   const eventOrders = useMemo(() => {
     if (!event) return [];
-    const allOrders = getAllOrders();
     return allOrders.filter((order) => order.eventId === event.id);
-  }, [event]);
+  }, [event, allOrders]);
 
   // Calculate analytics
   const analytics = useMemo(() => {
@@ -92,6 +112,14 @@ export default function EventAnalyticsPage() {
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-600 dark:text-slate-400">Loading analytics...</p>
+      </div>
+    );
+  }
 
   if (!event || !analytics) {
     return (

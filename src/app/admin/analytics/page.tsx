@@ -1,27 +1,48 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAllUsers, getAllOrganizers, getAllEvents, getAllOrders } from '@/lib/dummy-data';
+import { getAllUsers, getAllOrganizers, getAllEvents, getAllOrders } from '@/lib/services/apiService';
 
 /**
  * Admin Analytics Page
  * Displays platform analytics with date range filtering
  */
-export default function AnalyticsPage() {
+export default function AdminAnalyticsPage() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [organizers, setOrganizers] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [showFiltered, setShowFiltered] = useState(false);
 
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [usersData, organizersData, eventsData, ordersData] = await Promise.all([
+          getAllUsers(),
+          getAllOrganizers(),
+          getAllEvents(),
+          getAllOrders()
+        ]);
+        setUsers(usersData);
+        setOrganizers(organizersData);
+        setEvents(eventsData);
+        setOrders(ordersData);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Calculate metrics
   const metrics = useMemo(() => {
-    const users = getAllUsers();
-    const organizers = getAllOrganizers();
-    const events = getAllEvents();
-    const orders = getAllOrders();
-
     let filteredUsers = users;
     let filteredOrganizers = organizers;
     let filteredEvents = events;

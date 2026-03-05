@@ -2,8 +2,8 @@
  * User type definitions for the Event Management & Ticketing System
  */
 
-export type UserRole = 'admin' | 'organizer' | 'customer';
-export type UserStatus = 'active' | 'blocked';
+export type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked';
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
 export interface User {
@@ -17,7 +17,7 @@ export interface User {
 }
 
 export interface OrganizerProfile extends User {
-  role: 'organizer';
+  role: 'ORGANIZER';
   businessName: string;
   verificationStatus: VerificationStatus;
   documents: Document[];

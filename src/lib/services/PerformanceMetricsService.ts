@@ -45,7 +45,7 @@ class PerformanceMetricsService {
   private metricsQueue: MetricsQueueItem[] = [];
   private sessionId: string;
   private batchTimer: NodeJS.Timeout | null = null;
-  private isOnline: boolean = navigator.onLine;
+  private isOnline: boolean = typeof window !== 'undefined' ? navigator.onLine : true;
 
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
@@ -55,6 +55,9 @@ class PerformanceMetricsService {
   }
 
   private getOrCreateSessionId(): string {
+    if (typeof window === 'undefined') {
+      return `ssr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
     let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
     if (!sessionId) {
       sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -64,6 +67,7 @@ class PerformanceMetricsService {
   }
 
   private setupEventListeners(): void {
+    if (typeof window === 'undefined') return;
     window.addEventListener('online', () => {
       this.isOnline = true;
       this.processQueue();
@@ -144,9 +148,10 @@ class PerformanceMetricsService {
   }
 
   private sendBatch(batch: MetricsQueueItem[]): void {
+    if (typeof window === 'undefined') return;
     const metrics = batch.map((item) => item.metric);
 
-    navigator.sendBeacon(
+    const sent = navigator.sendBeacon(
       '/api/metrics/batch',
       JSON.stringify({
         metrics,
@@ -154,8 +159,8 @@ class PerformanceMetricsService {
       })
     );
 
-    // Fallback to fetch if sendBeacon is not available
-    if (!navigator.sendBeacon) {
+    // Fallback to fetch if sendBeacon is not available or failed
+    if (!sent) {
       fetch('/api/metrics/batch', {
         method: 'POST',
         headers: {
@@ -184,6 +189,7 @@ class PerformanceMetricsService {
   }
 
   private saveQueueToStorage(): void {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(METRICS_QUEUE_KEY, JSON.stringify(this.metricsQueue));
     } catch (error) {
@@ -192,6 +198,7 @@ class PerformanceMetricsService {
   }
 
   private loadQueueFromStorage(): void {
+    if (typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem(METRICS_QUEUE_KEY);
       if (stored) {
@@ -204,6 +211,7 @@ class PerformanceMetricsService {
   }
 
   private getCurrentPage(): string {
+    if (typeof window === 'undefined') return 'ssr';
     const pathname = window.location.pathname;
     if (pathname.includes('/checkout')) return 'checkout';
     if (pathname.includes('/events')) return 'listings';
@@ -211,6 +219,7 @@ class PerformanceMetricsService {
   }
 
   private getDeviceType(): string {
+    if (typeof window === 'undefined') return 'unknown';
     const ua = navigator.userAgent;
     if (/mobile|android|iphone|ipad|phone/i.test(ua)) {
       return /ipad/i.test(ua) ? 'tablet' : 'mobile';
@@ -219,6 +228,7 @@ class PerformanceMetricsService {
   }
 
   private getNetworkType(): string {
+    if (typeof window === 'undefined') return 'unknown';
     const connection =
       (navigator as any).connection ||
       (navigator as any).mozConnection ||

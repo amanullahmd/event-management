@@ -23,6 +23,11 @@ async function refreshAccessToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        return false;
+      }
+      
       const refreshToken = localStorage.getItem('auth_refresh_token');
       if (!refreshToken) {
         return false;
@@ -45,9 +50,7 @@ async function refreshAccessToken(): Promise<boolean> {
         localStorage.removeItem('auth_user_role');
         
         // Redirect to login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        window.location.href = '/login';
         return false;
       }
 
@@ -64,14 +67,14 @@ async function refreshAccessToken(): Promise<boolean> {
     } catch (error) {
       console.error('Token refresh failed:', error);
       // Clear tokens on error
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_refresh_token');
-      localStorage.removeItem('auth_token_expires_at');
-      localStorage.removeItem('auth_user_id');
-      localStorage.removeItem('auth_user_role');
-      
-      // Redirect to login
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_refresh_token');
+        localStorage.removeItem('auth_token_expires_at');
+        localStorage.removeItem('auth_user_id');
+        localStorage.removeItem('auth_user_role');
+        
+        // Redirect to login
         window.location.href = '/login';
       }
       return false;
@@ -91,7 +94,8 @@ export async function apiRequest<T>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const token = localStorage.getItem('auth_token');
+  // Check if we're in a browser environment
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -112,7 +116,7 @@ export async function apiRequest<T>(
     });
 
     // Handle 401 Unauthorized - try to refresh token and retry
-    if (response.status === 401) {
+    if (response.status === 401 && typeof window !== 'undefined') {
       const refreshed = await refreshAccessToken();
       
       if (refreshed) {

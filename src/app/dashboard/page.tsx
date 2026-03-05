@@ -1,10 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getOrdersByCustomerId, getTicketsByCustomerId, getAllEvents, getEventById } from '@/lib/dummy-data';
-import type { Order, Ticket, Event } from '@/lib/types';
+import { getOrdersByCustomerId, getTicketsByCustomerId, getEventById } from '@/lib/services/apiService';
+
+type AnyOrder = {
+  id: string;
+  eventId: string;
+  customerId: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  tickets: any[];
+};
+
+type AnyTicket = {
+  id: string;
+  eventId: string;
+  orderId: string;
+  checkedIn: boolean;
+};
+
+type AnyEvent = {
+  id: string;
+  name: string;
+  date: string | Date;
+  location: string;
+};
 
 /**
  * Customer Dashboard Overview Page
@@ -13,31 +36,73 @@ import type { Order, Ticket, Event } from '@/lib/types';
  */
 export default function CustomerDashboardPage() {
   const { user } = useAuth();
-  
-  // Get customer's orders and tickets
-  const orders = user ? getOrdersByCustomerId(user.id) : [];
-  const tickets = user ? getTicketsByCustomerId(user.id) : [];
-  const allEvents = getAllEvents();
-  
-  // Get upcoming events with tickets (events that haven't passed yet)
-  const now = new Date();
-  const upcomingTickets = tickets.filter((ticket) => {
-    const event = getEventById(ticket.eventId);
-    return event && new Date(event.date) > now;
-  });
-  
-  // Get unique upcoming events
-  const upcomingEventIds = [...new Set(upcomingTickets.map((t) => t.eventId))];
-  const upcomingEvents = upcomingEventIds
-    .map((id) => getEventById(id))
-    .filter((e): e is Event => e !== undefined)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
-  
-  // Get recent orders (last 5)
-  const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  const [orders, setOrders] = useState<AnyOrder[]>([]);
+  const [tickets, setTickets] = useState<AnyTicket[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<AnyEvent[]>([]);
+  const [upcomingTicketsByEvent, setUpcomingTicketsByEvent] = useState<Record<string, AnyTicket[]>>({});
+  const [recentOrders, setRecentOrders] = useState<AnyOrder[]>([]);
+  const [orderEventNames, setOrderEventNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchData = async () => {
+      try {
+        const [ordersData, ticketsData] = await Promise.all([
+          getOrdersByCustomerId(user.id),
+          getTicketsByCustomerId(user.id),
+        ]);
+
+        const allOrders = (ordersData || []) as AnyOrder[];
+        const allTickets = (ticketsData || []) as AnyTicket[];
+
+        setOrders(allOrders);
+        setTickets(allTickets);
+
+        // Recent orders: last 5 by date
+        const sortedOrders = [...allOrders].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setRecentOrders(sortedOrders.slice(0, 5));
+
+        // Fetch event names for recent orders
+        const orderEventIds = [...new Set(sortedOrders.slice(0, 5).map((o) => o.eventId))];
+        const orderEvents = await Promise.all(orderEventIds.map((id) => getEventById(id)));
+        const nameMap: Record<string, string> = {};
+        orderEventIds.forEach((id, i) => {
+          nameMap[id] = (orderEvents[i] as AnyEvent | undefined)?.name || 'Unknown Event';
+        });
+        setOrderEventNames(nameMap);
+
+        // Find upcoming events with tickets
+        const now = new Date();
+        const uniqueTicketEventIds = [...new Set(allTickets.map((t) => t.eventId))];
+        const ticketEvents = await Promise.all(uniqueTicketEventIds.map((id) => getEventById(id)));
+
+        const ticketsByEvent: Record<string, AnyTicket[]> = {};
+        const upcomingList: AnyEvent[] = [];
+
+        uniqueTicketEventIds.forEach((id, i) => {
+          const event = ticketEvents[i] as AnyEvent | undefined;
+          if (event && new Date(event.date) > now) {
+            const eventTickets = allTickets.filter((t) => t.eventId === id);
+            if (eventTickets.length > 0) {
+              ticketsByEvent[id] = eventTickets;
+              upcomingList.push(event);
+            }
+          }
+        });
+
+        upcomingList.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        setUpcomingTicketsByEvent(ticketsByEvent);
+        setUpcomingEvents(upcomingList.slice(0, 3));
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      }
+    };
+
+    fetchData();
+  }, [user?.id]);
 
   return (
     <div className="space-y-8">
@@ -64,7 +129,7 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -76,7 +141,7 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -109,7 +174,7 @@ export default function CustomerDashboardPage() {
           {upcomingEvents.length > 0 ? (
             <div className="space-y-4">
               {upcomingEvents.map((event) => {
-                const eventTickets = upcomingTickets.filter((t) => t.eventId === event.id);
+                const eventTickets = upcomingTicketsByEvent[event.id] || [];
                 return (
                   <div
                     key={event.id}
@@ -178,49 +243,46 @@ export default function CustomerDashboardPage() {
         <div className="p-6">
           {recentOrders.length > 0 ? (
             <div className="space-y-4">
-              {recentOrders.map((order) => {
-                const event = getEventById(order.eventId);
-                return (
-                  <Link
-                    key={order.id}
-                    href={`/dashboard/orders/${order.id}`}
-                    className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center text-white text-xl">
-                        📋
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900 dark:text-white">
-                          Order #{order.id.replace('order-', '')}
-                        </p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {event?.name || 'Unknown Event'}
-                        </p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
+              {recentOrders.map((order) => (
+                <Link
+                  key={order.id}
+                  href={`/dashboard/orders/${order.id}`}
+                  className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center text-white text-xl">
+                      📋
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-900 dark:text-white">
-                        ${order.totalAmount.toFixed(2)}
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        Order #{order.id.replace('order-', '')}
                       </p>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'completed'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : order.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}
-                      >
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {orderEventNames[order.eventId] || 'Unknown Event'}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      ${order.totalAmount.toFixed(2)}
+                    </p>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        order.status === 'completed'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : order.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}
+                    >
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
           ) : (
             <div className="text-center py-8">

@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getOrderById, getEventById, getTicketsByOrderId, updateOrderStatus } from '@/lib/dummy-data';
+import { getOrderById, getEventById, getTicketsByOrderId, updateOrderStatus } from '@/lib/services/apiService';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Order, Event, Ticket, TicketType } from '@/lib/types';
+
+// Use types from apiService to match API responses
+type Order = Awaited<ReturnType<typeof getOrderById>>;
+type Event = Awaited<ReturnType<typeof getEventById>>;
+type Ticket = Awaited<ReturnType<typeof getTicketsByOrderId>>[number];
+type TicketType = NonNullable<Event>['ticketTypes'][number];
 
 /**
  * Order Detail Page
@@ -21,11 +26,46 @@ export default function OrderDetailPage() {
   const [isRequestingRefund, setIsRequestingRefund] = useState(false);
   const [refundRequested, setRefundRequested] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [order, setOrder] = useState<Order | undefined>(undefined);
+  const [event, setEvent] = useState<Event | undefined>(undefined);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const orderId = params.id as string;
-  const order = getOrderById(orderId);
-  const event = order ? getEventById(order.eventId) : undefined;
-  const tickets = order ? getTicketsByOrderId(order.id) : [];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const orderData = await getOrderById(orderId);
+        setOrder(orderData);
+        
+        if (orderData) {
+          const [eventData, ticketsData] = await Promise.all([
+            getEventById(orderData.eventId),
+            getTicketsByOrderId(orderData.id)
+          ]);
+          setEvent(eventData);
+          setTickets(ticketsData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch order data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [orderId]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center">
+        <div className="animate-spin h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-slate-500 dark:text-slate-400">Loading order details...</p>
+      </div>
+    );
+  }
   
   // Verify order belongs to current user
   if (!order || (user && order.customerId !== user.id)) {

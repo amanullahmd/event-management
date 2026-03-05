@@ -16,7 +16,7 @@ export default function AdminLayout({
   const adminLinks = getRoleSidebarLinks('admin');
 
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="ADMIN">
       <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950">
         {/* Header */}
         <Header />

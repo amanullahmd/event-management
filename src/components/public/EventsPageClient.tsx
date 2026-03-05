@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { Event } from '@/lib/types';
+import type { Event } from '@/lib/services/apiService';
 import { Calendar, MapPin, Users, Search, Filter, X, ChevronDown, Grid3X3, List, Heart } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 12;
@@ -64,8 +64,8 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
 
   const handleClearFilters = useCallback(() => { setSearchQuery(''); setSelectedCategory('All'); setSelectedDate(''); }, []);
   const toggleLike = (eventId: string) => { setLikedEvents(prev => { const newSet = new Set(prev); if (newSet.has(eventId)) newSet.delete(eventId); else newSet.add(eventId); return newSet; }); };
-  const formatDate = useCallback((date: Date) => new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), []);
-  const formatTime = useCallback((date: Date) => new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }), []);
+  const formatDate = useCallback((date: Date | string) => new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), []);
+  const formatTime = useCallback((date: Date | string) => new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }), []);
   const getAvailableTickets = useCallback((event: Event) => event.ticketTypes.reduce((total, tt) => total + (tt.quantity - tt.sold), 0), []);
   const hasActiveFilters = searchQuery || selectedCategory !== 'All' || selectedDate;
 

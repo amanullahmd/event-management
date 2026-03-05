@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LocationProvider, useLocation } from '@/lib/context/LocationContext';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { TabFilter } from '@/components/landing/TabFilter';
@@ -14,13 +14,14 @@ import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { CreateEventCTA } from '@/components/landing/CreateEventCTA';
 import { useEventFilters } from '@/lib/hooks/useEventFilters';
 import {
-  mockLandingEvents,
   mockFeaturedCalendars,
   mockPopularCities,
   mockTestimonials,
   mockTrustMetrics,
 } from '@/lib/mock-landing-data';
-import { cn } from '@/lib/utils/cn';
+import { getAllEvents } from '@/lib/services/apiService';
+import type { Event } from '@/lib/types/event';
+import type { ExtendedEvent } from '@/components/shared/EventCard';
 
 /**
  * Landing page content component
@@ -29,25 +30,34 @@ import { cn } from '@/lib/utils/cn';
 function LandingPageContent() {
   const { selectedLocation } = useLocation();
   const [activeTab, setActiveTab] = useState('all');
-  const { filteredEvents } = useEventFilters(mockLandingEvents);
+  const [events, setEvents] = useState<Event[]>([]);
 
-  // Filter events by active tab
-  const getTabFilteredEvents = () => {
+  // Fetch real events from backend on mount
+  useEffect(() => {
+    getAllEvents()
+      .then((data) => setEvents((data || []).filter((e) => e.status === 'active') as unknown as Event[]))
+      .catch(() => setEvents([]));
+  }, []);
+
+  // All filter variants at top level (required by Rules of Hooks)
+  const { filteredEvents: allEvents } = useEventFilters(events);
+  const { filteredEvents: todayEvents } = useEventFilters(events, { dateRange: 'today' });
+  const { filteredEvents: weekendEvents } = useEventFilters(events, { dateRange: 'this-weekend' });
+  const { filteredEvents: freeEvents } = useEventFilters(events, { isFree: true });
+  const { filteredEvents: onlineEvents } = useEventFilters(events, { isOnline: true });
+
+  // Select correct filtered set based on active tab
+  const tabFilteredEvents = useMemo((): ExtendedEvent[] => {
+    let base: Event[];
     switch (activeTab) {
-      case 'today':
-        return useEventFilters(mockLandingEvents, { dateRange: 'today' }).filteredEvents;
-      case 'this-weekend':
-        return useEventFilters(mockLandingEvents, { dateRange: 'this-weekend' }).filteredEvents;
-      case 'free':
-        return useEventFilters(mockLandingEvents, { isFree: true }).filteredEvents;
-      case 'online':
-        return useEventFilters(mockLandingEvents, { isOnline: true }).filteredEvents;
-      default:
-        return filteredEvents;
+      case 'today':        base = todayEvents; break;
+      case 'this-weekend': base = weekendEvents; break;
+      case 'free':         base = freeEvents; break;
+      case 'online':       base = onlineEvents; break;
+      default:             base = allEvents;
     }
-  };
-
-  const tabFilteredEvents = getTabFilteredEvents();
+    return base as ExtendedEvent[];
+  }, [activeTab, allEvents, todayEvents, weekendEvents, freeEvents, onlineEvents]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">

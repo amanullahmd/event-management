@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getAllEvents, getAllOrders } from '@/lib/dummy-data';
+import { getAllEvents, getAllOrders } from '@/lib/services/apiService';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -19,24 +19,46 @@ import {
   Download
 } from 'lucide-react';
 
+type Event = Awaited<ReturnType<typeof getAllEvents>>[number];
+type Order = Awaited<ReturnType<typeof getAllOrders>>[number];
+
 export default function OrganizerAnalyticsPage() {
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
+  const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
+  const [organizerOrders, setOrganizerOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get organizer's events
-  const organizerEvents = useMemo(() => {
-    if (!user) return [];
-    const allEvents = getAllEvents();
-    return allEvents.filter((event) => event.organizerId === user.id);
+  // Fetch organizer's events and orders
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const [allEvents, allOrders] = await Promise.all([
+          getAllEvents(),
+          getAllOrders()
+        ]);
+
+        const events = allEvents.filter((event) => event.organizerId === user.id);
+        setOrganizerEvents(events);
+
+        const eventIds = events.map((e) => e.id);
+        const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
+        setOrganizerOrders(orders);
+      } catch (error) {
+        console.error('Failed to fetch analytics data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [user]);
-
-  // Get organizer's orders
-  const organizerOrders = useMemo(() => {
-    if (!user) return [];
-    const allOrders = getAllOrders();
-    const eventIds = organizerEvents.map((e) => e.id);
-    return allOrders.filter((order) => eventIds.includes(order.eventId));
-  }, [user, organizerEvents]);
 
   // Calculate comprehensive analytics
   const analytics = useMemo(() => {
@@ -101,7 +123,7 @@ export default function OrganizerAnalyticsPage() {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -129,6 +151,23 @@ export default function OrganizerAnalyticsPage() {
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">
+            Track your event performance and revenue
+          </p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-500 dark:text-slate-400">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

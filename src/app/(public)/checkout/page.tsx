@@ -7,8 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/lib/context/CartContext';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getEventById, createOrder } from '@/lib/dummy-data';
-import type { Event } from '@/lib/types';
+import { getEventById, createOrder } from '@/lib/services/apiService';
+import type { Event } from '@/lib/services/apiService';
 import { 
   ShoppingCart, 
   ArrowLeft, 
@@ -80,17 +80,21 @@ export default function CheckoutPage() {
 
   // Load event details for cart items
   useEffect(() => {
-    const eventMap: Record<string, Event> = {};
-    items.forEach((item) => {
-      if (!eventMap[item.eventId]) {
-        const event = getEventById(item.eventId);
-        if (event) {
-          eventMap[item.eventId] = event;
+    const loadEvents = async () => {
+      const eventMap: Record<string, Event> = {};
+      for (const item of items) {
+        if (!eventMap[item.eventId]) {
+          const event = await getEventById(item.eventId);
+          if (event) {
+            eventMap[item.eventId] = event;
+          }
         }
       }
-    });
-    setEvents(eventMap);
-    setIsLoading(false);
+      setEvents(eventMap);
+      setIsLoading(false);
+    };
+
+    loadEvents();
   }, [items]);
 
   // Pre-fill email if user is logged in
@@ -155,21 +159,23 @@ export default function CheckoutPage() {
       const orderTickets = items.flatMap((item) =>
         Array.from({ length: item.quantity }, (_, index) => ({
           id: `ticket-${Date.now()}-${index}`,
+          orderId: '', // Will be set after order creation
+          eventId: item.eventId,
           ticketTypeId: item.ticketTypeId,
-          quantity: 1,
           qrCode: `QR-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
           checkedIn: false,
+          status: 'valid' as const,
         }))
       );
 
-      const order = createOrder({
+      const order = await createOrder({
         customerId: user?.id || 'guest',
         eventId: items[0]?.eventId || '',
         tickets: orderTickets,
         totalAmount: getTotal(),
         status: 'completed',
         paymentMethod: 'credit_card',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
 
       setOrderId(order.id);
@@ -182,7 +188,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',

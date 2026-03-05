@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { getAllOrganizers, updateOrganizerVerificationStatus } from '@/lib/dummy-data';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getAllOrganizers, updateOrganizerVerificationStatus } from '@/lib/services/apiService';
 import { OrganizerProfile } from '@/lib/types/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,14 +37,28 @@ import {
  * Allows admin to approve, reject, or request additional information
  */
 export default function OrganizerManagementPage() {
-  const [organizers, setOrganizers] = useState<OrganizerProfile[]>(getAllOrganizers());
+  const [organizers, setOrganizers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrganizer, setSelectedOrganizer] = useState<OrganizerProfile | null>(null);
+  const [selectedOrganizer, setSelectedOrganizer] = useState<any | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'request-info' | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Fetch organizers on component mount
+  useEffect(() => {
+    const fetchOrganizers = async () => {
+      try {
+        const organizersData = await getAllOrganizers();
+        setOrganizers(organizersData);
+      } catch (error) {
+        console.error('Error fetching organizers:', error);
+      }
+    };
+
+    fetchOrganizers();
+  }, []);
 
   // Filter organizers based on search term
   const filteredOrganizers = useMemo(() => {
@@ -336,7 +350,7 @@ export default function OrganizerManagementPage() {
                   {selectedOrganizer.documents.length === 0 ? (
                     <p className="text-slate-600 dark:text-slate-400">No documents uploaded</p>
                   ) : (
-                    selectedOrganizer.documents.map((doc) => (
+                    selectedOrganizer.documents.map((doc: any) => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700"

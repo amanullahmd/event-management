@@ -1,10 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
-import { getTicketsByCustomerId, getEventById, getAllEvents } from '@/lib/dummy-data';
+import { getTicketsByCustomerId, getEventById, getAllEvents } from '@/lib/services/apiService';
 import { TicketCard } from '@/components/customer/TicketCard';
-import type { Ticket, Event, TicketType } from '@/lib/types';
+
+// Use types from apiService to match API responses
+type Ticket = Awaited<ReturnType<typeof getTicketsByCustomerId>>[number];
+type Event = Awaited<ReturnType<typeof getEventById>>;
+type TicketType = NonNullable<Event>['ticketTypes'][number];
+
+interface EnrichedTicket {
+  ticket: Ticket;
+  event: Event;
+  ticketType?: TicketType;
+}
 
 /**
  * Customer Tickets Page
@@ -14,22 +24,45 @@ import type { Ticket, Event, TicketType } from '@/lib/types';
 export default function TicketsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all');
-  
-  // Get customer's tickets
-  const tickets = user ? getTicketsByCustomerId(user.id) : [];
-  const allEvents = getAllEvents();
+  const [enrichedTickets, setEnrichedTickets] = useState<EnrichedTicket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const now = new Date();
   
-  // Enrich tickets with event data
-  const enrichedTickets = tickets.map((ticket) => {
-    const event = getEventById(ticket.eventId);
-    const ticketType = event?.ticketTypes.find((tt) => tt.id === ticket.ticketTypeId);
-    return {
-      ticket,
-      event,
-      ticketType,
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const tickets = await getTicketsByCustomerId(user.id);
+        
+        // Fetch event data for each ticket
+        const enriched = await Promise.all(
+          tickets.map(async (ticket) => {
+            const event = await getEventById(ticket.eventId);
+            const ticketType = event?.ticketTypes.find((tt) => tt.id === ticket.ticketTypeId);
+            return {
+              ticket,
+              event,
+              ticketType,
+            };
+          })
+        );
+        
+        // Filter out tickets without event data
+        setEnrichedTickets(enriched.filter((t) => t.event !== undefined) as EnrichedTicket[]);
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }).filter((t) => t.event !== undefined);
+
+    fetchTickets();
+  }, [user]);
   
   // Filter tickets based on selection
   const filteredTickets = enrichedTickets.filter(({ event }) => {
@@ -68,6 +101,27 @@ export default function TicketsPage() {
   const pastCount = enrichedTickets.filter(({ event }) => 
     event && new Date(event.date) <= now
   ).length;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              My Tickets
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              View and manage all your purchased tickets
+            </p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-500 dark:text-slate-400">Loading your tickets...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

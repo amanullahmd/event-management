@@ -38,9 +38,9 @@ export function ProtectedRoute({
       if (!roles.includes(user.role)) {
         // Redirect to appropriate dashboard based on user role
         const dashboardMap: Record<UserRole, string> = {
-          admin: '/admin',
-          organizer: '/organizer',
-          customer: '/dashboard',
+          ADMIN: '/admin',
+          ORGANIZER: '/organizer',
+          CUSTOMER: '/dashboard',
         };
         router.push(dashboardMap[user.role]);
       }

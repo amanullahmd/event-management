@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { getAllEvents, updateEventStatus, getOrganizerById } from '@/lib/dummy-data';
-import { Event } from '@/lib/types/event';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getAllEvents, updateEventStatus, getOrganizerById, getAllOrganizers } from '@/lib/services/apiService';
+import type { Event } from '@/lib/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +37,8 @@ import {
  * Allows admin to feature, suspend, or cancel events
  */
 export default function EventManagementPage() {
-  const [events, setEvents] = useState<Event[]>(getAllEvents());
+  const [events, setEvents] = useState<Event[]>([]);
+  const [organizers, setOrganizers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -45,6 +46,24 @@ export default function EventManagementPage() {
   const [actionType, setActionType] = useState<'feature' | 'suspend' | 'cancel' | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Fetch events and organizers on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [eventsData, organizersData] = await Promise.all([
+          getAllEvents(),
+          getAllOrganizers()
+        ]);
+        setEvents(eventsData);
+        setOrganizers(organizersData);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter events based on search term
   const filteredEvents = useMemo(() => {
@@ -124,7 +143,7 @@ export default function EventManagementPage() {
   };
 
   // Format date
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -188,7 +207,7 @@ export default function EventManagementPage() {
               </TableRow>
             ) : (
               paginatedEvents.map((event) => {
-                const organizer = getOrganizerById(event.organizerId);
+                const organizer = organizers.find((o) => o.id === event.organizerId);
                 return (
                   <TableRow
                     key={event.id}

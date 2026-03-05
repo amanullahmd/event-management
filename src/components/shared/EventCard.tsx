@@ -92,7 +92,7 @@ export interface EventCardProps {
 /**
  * Format a date for display
  */
-function formatEventDate(date: Date): string {
+function formatEventDate(date: Date | string): string {
   const eventDate = new Date(date);
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'short',
