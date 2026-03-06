@@ -25,6 +25,39 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@/modules/*": [
+        "./src/modules/*"
+      ],
+      "@/modules/authentication/*": [
+        "./src/modules/authentication/*"
+      ],
+      "@/modules/event-management/*": [
+        "./src/modules/event-management/*"
+      ],
+      "@/modules/ticket-management/*": [
+        "./src/modules/ticket-management/*"
+      ],
+      "@/modules/payment-processing/*": [
+        "./src/modules/payment-processing/*"
+      ],
+      "@/modules/email-campaigns/*": [
+        "./src/modules/email-campaigns/*"
+      ],
+      "@/modules/analytics/*": [
+        "./src/modules/analytics/*"
+      ],
+      "@/modules/trust-and-safety/*": [
+        "./src/modules/trust-and-safety/*"
+      ],
+      "@/modules/compliance/*": [
+        "./src/modules/compliance/*"
+      ],
+      "@/modules/high-availability/*": [
+        "./src/modules/high-availability/*"
+      ],
+      "@/modules/shared-common/*": [
+        "./src/modules/shared-common/*"
       ]
     }
   },

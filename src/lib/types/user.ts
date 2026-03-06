@@ -35,3 +35,4 @@ export interface Document {
 export interface AuthUser extends User {
   token?: string;
 }
+

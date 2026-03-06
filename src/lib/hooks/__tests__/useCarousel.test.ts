@@ -245,3 +245,4 @@ describe('useCarousel Hook', () => {
     });
   });
 });
+

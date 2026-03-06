@@ -160,3 +160,4 @@ export function getRoleSidebarLinks(role?: string): SidebarLink[] {
       return [];
   }
 }
+

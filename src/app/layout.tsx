@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/context/AuthContext";
-import { CartProvider } from "@/lib/context/CartContext";
+import { AuthProvider } from "@/modules/authentication/context/AuthContext";
+import { CartProvider } from "@/modules/payment-processing/context/CartContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 
 const geistSans = Geist({
@@ -67,3 +67,4 @@ export default function RootLayout({
     </html>
   );
 }
+

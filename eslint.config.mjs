@@ -12,7 +12,29 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Module-specific ignores
+    "src/modules/**/__tests__/**",
+    "src/modules/**/*.test.ts",
+    "src/modules/**/*.test.tsx",
+    "src/modules/**/*.spec.ts",
+    "src/modules/**/*.spec.tsx",
   ]),
+  {
+    rules: {
+      // Module-specific linting rules
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            // Prevent cross-module imports except through public APIs
+            "*/modules/*/service/*",
+            "*/modules/*/components/*",
+            "*/modules/*/hooks/*",
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

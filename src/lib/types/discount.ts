@@ -6,3 +6,4 @@ export interface DiscountResponse {
   subtotal: number;
   newTotal: number;
 }
+

@@ -442,3 +442,4 @@ export function countActiveFilters(filters: Partial<EventFilters>): number {
 
   return count;
 }
+

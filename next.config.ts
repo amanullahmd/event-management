@@ -28,6 +28,16 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['recharts', 'lucide-react'],
   },
 
+  // Module resolution for modular structure
+  webpack: (config, { isServer }) => {
+    // Optimize module resolution for modular structure
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@/modules': require('path').resolve(__dirname, 'src/modules'),
+    };
+    return config;
+  },
+
   // Headers for caching
   async headers() {
     return [

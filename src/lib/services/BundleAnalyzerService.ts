@@ -130,3 +130,4 @@ export class BundleAnalyzerService {
     return recommendations;
   }
 }
+

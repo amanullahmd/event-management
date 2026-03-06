@@ -2,7 +2,7 @@
  * Admin API service for fetching real data from backend
  */
 
-import { apiRequest } from '@/lib/utils/api';
+import { apiRequest } from '@/modules/shared-common/utils/api';
 
 // Dashboard metrics
 export async function getDashboardMetrics(startDate?: string, endDate?: string) {
@@ -123,3 +123,4 @@ export async function getTransactionsByRiskLevel(riskLevel: string) {
     throw error;
   }
 }
+

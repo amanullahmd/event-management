@@ -102,3 +102,4 @@ export interface UpdateVisibilitySettingsRequest {
   performanceMetricsVisible?: boolean;
   reviewsVisible?: boolean;
 }
+

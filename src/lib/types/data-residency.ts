@@ -68,3 +68,4 @@ export interface RegionalStorageSummary {
   usersPerRegion: Record<string, number>;
   regions: RegionDetail[];
 }
+

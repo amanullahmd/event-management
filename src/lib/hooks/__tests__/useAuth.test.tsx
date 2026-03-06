@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '@/lib/context/AuthContext';
+import { AuthProvider, useAuth } from '@/modules/authentication/context/AuthContext';
 import { resetDummyData, getAllUsers } from '@/lib/dummy-data';
 
 // Wrapper component for testing hooks with context
@@ -165,3 +165,4 @@ describe('useAuth Hook', () => {
     }
   });
 });
+

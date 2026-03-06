@@ -267,3 +267,4 @@ export function getPerformanceMetricsService(): PerformanceMetricsService {
   }
   return instance;
 }
+

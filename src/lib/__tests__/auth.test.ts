@@ -275,3 +275,4 @@ describe('Property 15: Protected routes redirect unauthorized users', () => {
     );
   });
 });
+

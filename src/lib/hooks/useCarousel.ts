@@ -136,3 +136,4 @@ export function useCarousel(options: UseCarouselOptions = {}): UseCarouselReturn
 }
 
 export default useCarousel;
+

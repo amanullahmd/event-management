@@ -47,3 +47,4 @@ export interface SalesDataPoint {
   sales: number;
   revenue: number;
 }
+

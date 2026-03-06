@@ -166,3 +166,4 @@ export class ImageOptimizerService {
     return `${baseUrl}${separator}w=${size}`;
   }
 }
+

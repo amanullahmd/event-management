@@ -50,3 +50,4 @@ export interface DataMinimizationReport {
   optionalFields: number;
   policies: FieldPolicy[];
 }
+

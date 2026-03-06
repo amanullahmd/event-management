@@ -206,3 +206,4 @@ describe('PerformanceMetricsService - Property 3: Core Web Vitals Metrics Collec
     );
   });
 });
+

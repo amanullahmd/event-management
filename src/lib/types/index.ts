@@ -4,8 +4,9 @@
 
 export * from './user';
 export * from './event';
-export * from './event-update';
-export * from './ticket';
+export * from '../../modules/event-management/types/event-update';
+export * from '../../modules/ticket-management/types/ticket';
 export * from './order';
-export * from './api';
+export * from './refunds';
+export * from '../../modules/shared-common/types/api';
 export * from './organizer-trust-profiles';

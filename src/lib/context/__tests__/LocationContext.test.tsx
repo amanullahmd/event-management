@@ -310,3 +310,4 @@ function useLocationFromProvider() {
   }
   return capturedContext;
 }
+
