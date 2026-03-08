@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { PricingRuleType, PricingRule, CreatePricingRuleRequest, UpdatePricingRuleRequest } from '@/modules/ticket-management/types/pricing';
 
 interface PricingRuleFormProps {

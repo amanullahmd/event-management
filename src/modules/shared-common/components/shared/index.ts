@@ -16,6 +16,6 @@ export type { SocialProofBadgeProps } from './SocialProofBadge';
 export { EventCard } from './EventCard';
 export type { EventCardProps, ExtendedEvent } from './EventCard';
 
-export { EventTypeSelector } from '../../modules/event-management/components/EventTypeSelector';
-export type { EventType } from '../../modules/event-management/components/EventTypeSelector';
+export { EventTypeSelector } from '@/modules/event-management/components/EventTypeSelector';
+export type { EventType } from '@/modules/event-management/components/EventTypeSelector';
 

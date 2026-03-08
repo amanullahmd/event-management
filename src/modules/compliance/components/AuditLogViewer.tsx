@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
 
 interface AuditLogEntry {
   id: string;
@@ -26,7 +26,7 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs, isLoading 
       case 'UPDATE':
         return 'secondary';
       case 'DEACTIVATE':
-        return 'destructive';
+        return 'error';
       case 'REACTIVATE':
         return 'default';
       default:

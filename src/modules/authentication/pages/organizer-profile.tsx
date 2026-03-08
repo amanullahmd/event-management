@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { getOrganizerById } from '@/modules/shared-common/services/apiService';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { User, Mail, Phone, Building2, MapPin, Globe, Shield, Bell, Trash2 } from 'lucide-react';
 
 interface OrganizerProfile {

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { TicketSelector } from '@/components/public/TicketSelector';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { TicketSelector } from '@/modules/shared-common/components/public/TicketSelector';
 import { getEventById } from '@/modules/shared-common/services/apiService';
 import { useCart } from '@/modules/payment-processing/context/CartContext';
 import type { Event, TicketType } from '@/modules/shared-common/services/apiService';

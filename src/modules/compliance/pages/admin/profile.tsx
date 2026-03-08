@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { User, Mail, Phone, Shield, Bell, Trash2, Key } from 'lucide-react';
 
 interface AdminProfile {

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
 import { Database, Lock, Unlock } from 'lucide-react';
 import type { DataMinimizationReport, FieldPolicy } from '@/lib/types/gdpr';
 
@@ -137,7 +137,7 @@ export const DataMinimizationDashboard: React.FC<DataMinimizationDashboardProps>
                     <TableCell className="text-sm">{policy.purpose}</TableCell>
                     <TableCell>
                       {policy.required ? (
-                        <Badge variant="destructive">Required</Badge>
+                        <Badge variant="error">Required</Badge>
                       ) : (
                         <Badge variant="outline">Optional</Badge>
                       )}

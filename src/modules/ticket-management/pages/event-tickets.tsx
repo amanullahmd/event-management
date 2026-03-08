@@ -135,7 +135,7 @@ export default function CreateTicketTypePage() {
           Ticket Type Tips
         </h3>
         <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-          <li>• Use descriptive names like "VIP Pass" or "General Admission"</li>
+          <li>• Use descriptive names like &quot;VIP Pass&quot; or &quot;General Admission&quot;</li>
           <li>• Set prices that reflect the value of the ticket</li>
           <li>• Limit quantities to control ticket availability</li>
           <li>• Use categories to organize different ticket tiers</li>

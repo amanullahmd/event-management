@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { getTicketsByCustomerId, getEventById, getAllEvents } from '@/modules/shared-common/services/apiService';
-import { TicketCard } from '@/components/customer/TicketCard';
+import { TicketCard } from '@/modules/payment-processing/components/customer/TicketCard';
 
 // Use types from apiService to match API responses
 type Ticket = Awaited<ReturnType<typeof getTicketsByCustomerId>>[number];
@@ -201,12 +202,12 @@ export default function TicketsPage() {
               ? "You don't have any upcoming events. Time to plan your next adventure!"
               : "You don't have any past event tickets."}
           </p>
-          <a
+          <Link
             href="/events"
             className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
           >
             Browse Events
-          </a>
+          </Link>
         </div>
       )}
     </div>

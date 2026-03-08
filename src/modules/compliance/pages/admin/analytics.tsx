@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AnalyticsCharts } from '@/modules/shared-common/components/admin/AnalyticsCharts';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
 import { getAllUsers, getAllOrganizers, getAllEvents, getAllOrders } from '@/modules/shared-common/services/apiService';
 
 /**

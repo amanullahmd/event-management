@@ -2,11 +2,12 @@
  * Card Component
  * 
  * A flexible card container component for displaying content in a bordered box.
- * Built with shadcn/ui patterns and supports dark mode.
+ * Built with shadcn/ui patterns and supports dark mode with design system tokens.
+ * Supports multiple variants: elevated, outlined, filled.
  * 
  * @example
  * ```tsx
- * <Card>
+ * <Card variant="elevated">
  *   <CardHeader>
  *     <CardTitle>Card Title</CardTitle>
  *     <CardDescription>Card description text</CardDescription>
@@ -17,27 +18,52 @@
  * ```
  */
 import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/modules/shared-common/utils/cn"
+
+const cardVariants = cva(
+  "rounded-lg text-(--color-text-primary) transition-all duration-200",
+  {
+    variants: {
+      variant: {
+        elevated: "bg-white dark:bg-(--color-surface) shadow-md border border-(--color-border)",
+        outlined: "bg-white dark:bg-(--color-surface) border border-(--color-border) shadow-sm",
+        filled: "bg-(--color-surface) dark:bg-slate-800 border-none shadow-sm",
+      },
+    },
+    defaultVariants: {
+      variant: "outlined",
+    },
+  }
+)
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {
+  hoverable?: boolean
+}
 
 /**
  * Main card container component
  * @param className - Additional CSS classes to apply
+ * @param variant - Card style variant (elevated, outlined, filled)
+ * @param hoverable - Add hover lift effect
  * @param props - Standard HTML div attributes
  */
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border border-slate-200 bg-white text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50",
-      className
-    )}
-    {...props}
-  />
-))
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, hoverable = false, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        cardVariants({ variant }),
+        hoverable && "hover-lift cursor-pointer",
+        className
+      )}
+      {...props}
+    />
+  )
+)
 Card.displayName = "Card"
 
 /**
@@ -85,7 +111,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-slate-500 dark:text-slate-200", className)}
+    className={cn("text-sm text-(--color-text-secondary)", className)}
     {...props}
   />
 ))

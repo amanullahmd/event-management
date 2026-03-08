@@ -22,7 +22,7 @@
 
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-import { CategoryPill } from '@/components/shared/CategoryPill';
+import { CategoryPill } from '@/modules/shared-common/components/shared/CategoryPill';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 /**

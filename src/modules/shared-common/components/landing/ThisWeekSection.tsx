@@ -23,7 +23,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
-import { EventCard, ExtendedEvent } from '@/components/shared/EventCard';
+import { EventCard, ExtendedEvent } from '@/modules/shared-common/components/shared/EventCard';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface ThisWeekSectionProps {

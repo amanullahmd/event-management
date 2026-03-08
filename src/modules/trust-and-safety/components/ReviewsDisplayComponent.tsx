@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { apiGet } from '@/modules/shared-common/utils/api';
 import type { Review } from '@/lib/types/organizer-trust-profiles';
 import type { PaginatedResponse } from '@/modules/shared-common/types/api';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 
 interface ReviewsDisplayComponentProps {
   organizerId: string;

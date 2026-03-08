@@ -1,0 +1,533 @@
+/* Design System Utility Classes */
+
+/* Container utilities */
+.container-page {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.container-sm {
+  @apply max-w-2xl mx-auto;
+}
+
+.container-md {
+  @apply max-w-4xl mx-auto;
+}
+
+.container-lg {
+  @apply max-w-6xl mx-auto;
+}
+
+.container-xl {
+  @apply max-w-7xl mx-auto;
+}
+
+.container-full {
+  @apply w-full;
+}
+
+/* Section padding utilities */
+.section-padding {
+  @apply py-12 sm:py-16 lg:py-20;
+}
+
+.section-padding-sm {
+  @apply py-6 sm:py-8 lg:py-10;
+}
+
+.section-padding-lg {
+  @apply py-16 sm:py-20 lg:py-24;
+}
+
+.section-padding-xl {
+  @apply py-20 sm:py-24 lg:py-32;
+}
+
+/* Text gradient utilities */
+.text-gradient {
+  @apply bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent;
+}
+
+.text-gradient-primary {
+  @apply bg-gradient-to-r from-indigo-600 to-indigo-400 bg-clip-text text-transparent;
+}
+
+.text-gradient-secondary {
+  @apply bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent;
+}
+
+/* Responsive grid helpers */
+.grid-auto-fit {
+  @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+.grid-auto-fit-sm {
+  @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2;
+}
+
+.grid-auto-fit-md {
+  @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.grid-auto-fit-lg {
+  @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+}
+
+/* Flex utilities */
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+.flex-between {
+  @apply flex items-center justify-between;
+}
+
+.flex-start {
+  @apply flex items-center justify-start;
+}
+
+.flex-end {
+  @apply flex items-center justify-end;
+}
+
+.flex-col-center {
+  @apply flex flex-col items-center justify-center;
+}
+
+/* Stack utilities */
+.stack-sm {
+  @apply space-y-2;
+}
+
+.stack-md {
+  @apply space-y-4;
+}
+
+.stack-lg {
+  @apply space-y-6;
+}
+
+.stack-xl {
+  @apply space-y-8;
+}
+
+.stack-horizontal-sm {
+  @apply flex gap-2;
+}
+
+.stack-horizontal-md {
+  @apply flex gap-4;
+}
+
+.stack-horizontal-lg {
+  @apply flex gap-6;
+}
+
+.stack-horizontal-xl {
+  @apply flex gap-8;
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background-size: 1000px 100%;
+}
+
+/* Animation delays */
+.animation-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animation-delay-500 {
+  animation-delay: 500ms;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+/* Hover effects */
+.hover-lift {
+  @apply transition-transform duration-200;
+}
+
+.hover-lift:hover {
+  @apply -translate-y-1;
+}
+
+.hover-scale {
+  @apply transition-transform duration-200;
+}
+
+.hover-scale:hover {
+  @apply scale-105;
+}
+
+.hover-glow {
+  @apply transition-shadow duration-200;
+}
+
+.hover-glow:hover {
+  @apply shadow-lg shadow-indigo-500/25;
+}
+
+.hover-shadow {
+  @apply transition-shadow duration-200;
+}
+
+.hover-shadow:hover {
+  @apply shadow-lg;
+}
+
+/* Accessibility utilities */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  @apply static w-auto h-auto p-2 m-0 overflow-visible whitespace-normal;
+  clip: auto;
+}
+
+.skip-link {
+  @apply absolute -top-10 left-0 bg-indigo-600 text-white px-4 py-2 z-50 transition-all duration-200;
+}
+
+.skip-link:focus {
+  @apply top-0;
+}
+
+/* Touch target sizing */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+.touch-target-sm {
+  @apply min-h-[40px] min-w-[40px];
+}
+
+.touch-target-lg {
+  @apply min-h-[48px] min-w-[48px];
+}
+
+/* Focus ring utilities */
+.focus-ring {
+  @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500;
+}
+
+.focus-ring-primary {
+  @apply focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900;
+}
+
+.focus-ring-secondary {
+  @apply focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900;
+}
+
+/* Responsive text sizing */
+.text-responsive-sm {
+  @apply text-sm sm:text-base lg:text-lg;
+}
+
+.text-responsive-base {
+  @apply text-base sm:text-lg lg:text-xl;
+}
+
+.text-responsive-lg {
+  @apply text-lg sm:text-xl lg:text-2xl;
+}
+
+.text-responsive-xl {
+  @apply text-xl sm:text-2xl lg:text-3xl;
+}
+
+.text-responsive-2xl {
+  @apply text-2xl sm:text-3xl lg:text-4xl;
+}
+
+/* Responsive padding */
+.px-responsive {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+.py-responsive {
+  @apply py-4 sm:py-6 lg:py-8;
+}
+
+.p-responsive {
+  @apply p-4 sm:p-6 lg:p-8;
+}
+
+/* Responsive gap */
+.gap-responsive {
+  @apply gap-4 sm:gap-6 lg:gap-8;
+}
+
+/* Responsive margin */
+.mx-responsive {
+  @apply mx-4 sm:mx-6 lg:mx-8;
+}
+
+.my-responsive {
+  @apply my-4 sm:my-6 lg:my-8;
+}
+
+.m-responsive {
+  @apply m-4 sm:m-6 lg:m-8;
+}
+
+/* Backdrop utilities */
+.backdrop-blur-sm {
+  @apply backdrop-blur-sm;
+}
+
+.backdrop-blur-md {
+  @apply backdrop-blur-md;
+}
+
+.backdrop-blur-lg {
+  @apply backdrop-blur-lg;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  @apply bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950;
+}
+
+.bg-gradient-secondary {
+  @apply bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950;
+}
+
+.bg-gradient-accent {
+  @apply bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950;
+}
+
+/* Border utilities */
+.border-primary {
+  @apply border-indigo-200 dark:border-indigo-800;
+}
+
+.border-secondary {
+  @apply border-purple-200 dark:border-purple-800;
+}
+
+.border-accent {
+  @apply border-amber-200 dark:border-amber-800;
+}
+
+/* Divider utilities */
+.divider {
+  @apply border-t border-slate-200 dark:border-slate-800;
+}
+
+.divider-vertical {
+  @apply border-l border-slate-200 dark:border-slate-800;
+}
+
+/* Overlay utilities */
+.overlay {
+  @apply fixed inset-0 bg-black/50 dark:bg-black/70;
+}
+
+.overlay-light {
+  @apply fixed inset-0 bg-black/30 dark:bg-black/50;
+}
+
+.overlay-dark {
+  @apply fixed inset-0 bg-black/70 dark:bg-black/80;
+}
+
+/* Scrollbar utilities */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  @apply bg-slate-100 dark:bg-slate-900;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full hover:bg-slate-400 dark:hover:bg-slate-600;
+}
+
+/* Truncate utilities */
+.truncate-line-1 {
+  @apply line-clamp-1;
+}
+
+.truncate-line-2 {
+  @apply line-clamp-2;
+}
+
+.truncate-line-3 {
+  @apply line-clamp-3;
+}
+
+.truncate-line-4 {
+  @apply line-clamp-4;
+}
+
+/* Aspect ratio utilities */
+.aspect-video {
+  @apply aspect-video;
+}
+
+.aspect-square {
+  @apply aspect-square;
+}
+
+.aspect-auto {
+  @apply aspect-auto;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-fade-in-down,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-scale-in,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .hover-lift,
+  .hover-scale,
+  .hover-glow,
+  .hover-shadow {
+    animation: none !important;
+    transition: none !important;
+  }
+}

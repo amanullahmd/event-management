@@ -15,7 +15,7 @@ jest.mock('@/lib/hooks', () => ({
 }));
 
 // Mock EventCreationForm component
-jest.mock('@/components/organizer/EventCreationForm', () => {
+jest.mock('@/modules/event-management/components/EventCreationForm', () => {
   return function MockEventCreationForm() {
     return <div data-testid="event-creation-form">Event Creation Form</div>;
   };

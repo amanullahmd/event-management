@@ -103,7 +103,7 @@ export const RefundRequestSubmission: React.FC<RefundRequestSubmissionProps> = (
         <div>
           <h3 className="font-semibold text-green-900">Refund Request Submitted</h3>
           <p className="text-sm text-green-700 mt-1">
-            Your refund request has been submitted successfully. You'll receive a confirmation email shortly.
+            Your refund request has been submitted successfully. You&apos;ll receive a confirmation email shortly.
           </p>
         </div>
       </div>

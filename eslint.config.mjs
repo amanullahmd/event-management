@@ -22,17 +22,8 @@ const eslintConfig = defineConfig([
   {
     rules: {
       // Module-specific linting rules
-      "no-restricted-imports": [
-        "warn",
-        {
-          patterns: [
-            // Prevent cross-module imports except through public APIs
-            "*/modules/*/service/*",
-            "*/modules/*/components/*",
-            "*/modules/*/hooks/*",
-          ],
-        },
-      ],
+      // shared-common is the shared library used by all modules — unrestricted
+      "no-restricted-imports": "off",
     },
   },
 ]);

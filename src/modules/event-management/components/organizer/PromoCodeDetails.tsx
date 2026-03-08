@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
 
 interface PromoCodeDetailsProps {

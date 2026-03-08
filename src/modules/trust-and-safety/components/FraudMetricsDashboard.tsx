@@ -1,5 +1,13 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Spinner } from '@/modules/shared-common/components/ui/spinner';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 
 interface FraudMetrics {
   fraudDetectionRate: number;
@@ -15,7 +23,13 @@ interface FraudMetrics {
   lastUpdated: string;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+// Design system chart colors
+const CHART_COLORS = [
+  'var(--color-primary)',
+  'var(--color-success)',
+  'var(--color-warning)',
+  'var(--color-error)',
+];
 
 export const FraudMetricsDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<FraudMetrics | null>(null);
@@ -24,7 +38,7 @@ export const FraudMetricsDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 60000); // Refresh every minute
+    const interval = setInterval(fetchMetrics, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -32,8 +46,7 @@ export const FraudMetricsDashboard: React.FC = () => {
     try {
       const response = await fetch('/api/admin/fraud/metrics');
       if (!response.ok) throw new Error('Failed to fetch metrics');
-      const data = await response.json();
-      setMetrics(data);
+      setMetrics(await response.json());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -42,9 +55,29 @@ export const FraudMetricsDashboard: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-4">Loading fraud metrics...</div>;
-  if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
-  if (!metrics) return <div className="p-4">No metrics available</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Spinner size="lg" label="Loading fraud metrics..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card variant="outlined" className="border-(--color-error)">
+        <CardContent className="p-6 text-(--color-error)">Error: {error}</CardContent>
+      </Card>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <Card variant="outlined">
+        <CardContent className="p-6 text-(--color-text-secondary)">No metrics available</CardContent>
+      </Card>
+    );
+  }
 
   const riskLevelData = Object.entries(metrics.riskLevelDistribution).map(([level, count]) => ({
     name: level,
@@ -57,91 +90,109 @@ export const FraudMetricsDashboard: React.FC = () => {
   }));
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
-      <h1 className="text-3xl font-bold mb-6">Fraud Detection Dashboard</h1>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Fraud Detection Rate</p>
-          <p className="text-2xl font-bold text-blue-600">{metrics.fraudDetectionRate.toFixed(2)}%</p>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">False Positive Rate</p>
-          <p className="text-2xl font-bold text-red-600">{metrics.falsePositiveRate.toFixed(2)}%</p>
-        </div>
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Average Fraud Score</p>
-          <p className="text-2xl font-bold text-yellow-600">{metrics.averageFraudScore.toFixed(2)}</p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Blocked Transactions</p>
-          <p className="text-2xl font-bold text-green-600">{metrics.blockedTransactions}</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-(--color-text-primary)">Fraud Detection Dashboard</h1>
+        <Badge variant="info" dot>Live</Badge>
       </div>
 
-      {/* Transaction Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Total Transactions</p>
-          <p className="text-2xl font-bold">{metrics.totalTransactionsAnalyzed}</p>
-        </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Fraudulent Detected</p>
-          <p className="text-2xl font-bold text-red-600">{metrics.fraudulentTransactionsDetected}</p>
-        </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Fraud Loss Amount</p>
-          <p className="text-2xl font-bold">${metrics.fraudLossAmount}</p>
-        </div>
+      {/* Key metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Detection Rate', value: `${metrics.fraudDetectionRate.toFixed(2)}%`, variant: 'info' as const },
+          { label: 'False Positive Rate', value: `${metrics.falsePositiveRate.toFixed(2)}%`, variant: 'error' as const },
+          { label: 'Avg Fraud Score', value: metrics.averageFraudScore.toFixed(2), variant: 'warning' as const },
+          { label: 'Blocked Transactions', value: String(metrics.blockedTransactions), variant: 'success' as const },
+        ].map(({ label, value, variant }) => (
+          <Card key={label} variant="elevated">
+            <CardContent className="p-4">
+              <p className="text-sm text-(--color-text-secondary)">{label}</p>
+              <p className="text-2xl font-bold text-(--color-text-primary) mt-1">{value}</p>
+              <Badge variant={variant} size="sm" className="mt-2">{variant.toUpperCase()}</Badge>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Transaction stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Total Transactions', value: String(metrics.totalTransactionsAnalyzed) },
+          { label: 'Fraudulent Detected', value: String(metrics.fraudulentTransactionsDetected) },
+          { label: 'Fraud Loss', value: `$${metrics.fraudLossAmount}` },
+        ].map(({ label, value }) => (
+          <Card key={label} variant="outlined">
+            <CardContent className="p-4">
+              <p className="text-sm text-(--color-text-secondary)">{label}</p>
+              <p className="text-2xl font-bold text-(--color-text-primary) mt-1">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Risk Level Distribution */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4">Risk Level Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={riskLevelData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {riskLevelData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Risk Level Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={riskLevelData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={90}
+                  dataKey="value"
+                >
+                  {riskLevelData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Decision Distribution */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4">Decision Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={decisionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Decision Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={decisionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                />
+                <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Last Updated */}
-      <div className="text-sm text-gray-500 text-right">
+      <p className="text-xs text-(--color-text-tertiary) text-right">
         Last updated: {new Date(metrics.lastUpdated).toLocaleString()}
-      </div>
+      </p>
     </div>
   );
 };
-

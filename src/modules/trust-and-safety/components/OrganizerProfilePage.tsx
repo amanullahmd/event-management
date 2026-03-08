@@ -12,10 +12,10 @@ import type {
 } from '@/lib/types/organizer-trust-profiles';
 import type { PaginatedResponse } from '@/modules/shared-common/types/api';
 import { EventHistoryComponent } from './EventHistoryComponent';
-import { PerformanceMetricsComponent } from '../../../components/public/PerformanceMetricsComponent';
+import { PerformanceMetricsComponent } from '@/modules/shared-common/components/public/PerformanceMetricsComponent';
 import { ReviewsDisplayComponent } from './ReviewsDisplayComponent';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Card } from '@/modules/shared-common/components/ui/card';
 
 interface OrganizerProfilePageProps {
   organizerId?: string;
@@ -102,6 +102,7 @@ export const OrganizerProfilePage: React.FC<OrganizerProfilePageProps> = ({
               <img
                 src={profile.profilePictureUrl}
                 alt={profile.name}
+                loading="lazy"
                 className="w-24 h-24 rounded-full object-cover"
               />
             )}

@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { RetentionPolicyManagement } from '@/components/data-governance/RetentionPolicyManagement';
-import { RetentionExecutionLogViewer } from '@/components/data-governance/RetentionExecutionLog';
-import { RegionalStorageDashboard } from '@/components/data-governance/RegionalStorageDashboard';
+import { RetentionPolicyManagement } from '@/modules/compliance/components/data-governance/RetentionPolicyManagement';
+import { RetentionExecutionLogViewer } from '@/modules/compliance/components/data-governance/RetentionExecutionLog';
+import { RegionalStorageDashboard } from '@/modules/compliance/components/data-governance/RegionalStorageDashboard';
 
 export default function DataResidencyPage() {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';

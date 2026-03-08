@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 
 interface AuditLog {
   id: string;

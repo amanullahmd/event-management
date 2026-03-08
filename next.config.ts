@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Image optimization
@@ -29,11 +30,11 @@ const nextConfig: NextConfig = {
   },
 
   // Module resolution for modular structure
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     // Optimize module resolution for modular structure
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@/modules': require('path').resolve(__dirname, 'src/modules'),
+      '@/modules': path.resolve(process.cwd(), 'src/modules'),
     };
     return config;
   },

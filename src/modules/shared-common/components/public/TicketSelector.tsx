@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 import { Minus, Plus, ShoppingCart, Sparkles, Clock, Ticket } from 'lucide-react';
 import type { TicketType } from '@/modules/shared-common/services/apiService';
 

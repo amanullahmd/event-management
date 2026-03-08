@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Label } from '@/modules/shared-common/components/ui/label';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import {
   Table,
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/modules/shared-common/components/ui/table';
 
 interface ReferralAnalytics {
   referralCode: string;

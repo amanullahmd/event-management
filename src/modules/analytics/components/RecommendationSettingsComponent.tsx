@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface RecommendationSettings {

@@ -29,7 +29,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="w-full bg-gray-900 text-gray-300" role="contentinfo">
+    <footer className="w-full bg-(--color-background) dark:bg-slate-950 text-(--color-text-secondary)" role="contentinfo">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
@@ -39,23 +39,23 @@ export function Footer() {
               <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
                 E
               </div>
-              <span className="font-bold text-xl text-white">EventHub</span>
+              <span className="font-bold text-xl text-(--color-text-primary)">EventHub</span>
             </Link>
-            <p className="text-sm text-gray-400 mb-6 max-w-xs">
+            <p className="text-sm text-(--color-text-secondary) mb-6 max-w-xs">
               The all-in-one event management platform. Create, promote, and sell tickets to your events with ease.
             </p>
             {/* Social Links */}
             <div className="flex gap-4">
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-violet-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
+              <a href="#" className="w-9 h-9 bg-(--color-surface) hover:bg-(--color-primary) rounded-lg flex items-center justify-center transition-colors" aria-label="Facebook">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-violet-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Twitter">
+              <a href="#" className="w-9 h-9 bg-(--color-surface) hover:bg-(--color-primary) rounded-lg flex items-center justify-center transition-colors" aria-label="Twitter">
                 <Twitter className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-violet-600 rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
+              <a href="#" className="w-9 h-9 bg-(--color-surface) hover:bg-(--color-primary) rounded-lg flex items-center justify-center transition-colors" aria-label="Instagram">
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-violet-600 rounded-lg flex items-center justify-center transition-colors" aria-label="LinkedIn">
+              <a href="#" className="w-9 h-9 bg-(--color-surface) hover:bg-(--color-primary) rounded-lg flex items-center justify-center transition-colors" aria-label="LinkedIn">
                 <Linkedin className="w-4 h-4" />
               </a>
             </div>
@@ -64,13 +64,13 @@ export function Footer() {
           {/* Link Columns */}
           {Object.entries(footerLinks).map(([title, links]) => (
             <nav key={title} aria-label={`${title} links`}>
-              <h3 className="font-semibold text-white mb-4 text-sm">{title}</h3>
+              <h3 className="font-semibold text-(--color-text-primary) mb-4 text-sm">{title}</h3>
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
                     <Link 
                       href={link.href} 
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -82,19 +82,19 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="py-6 border-t border-gray-800">
+        <div className="py-6 border-t border-(--color-border)">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-(--color-text-tertiary)">
               © {currentYear} EventHub. All rights reserved.
             </p>
             <div className="flex flex-wrap justify-center gap-6">
-              <Link href="/" className="text-sm text-gray-500 hover:text-white transition-colors">
+              <Link href="/" className="text-sm text-(--color-text-tertiary) hover:text-(--color-text-primary) transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/" className="text-sm text-gray-500 hover:text-white transition-colors">
+              <Link href="/" className="text-sm text-(--color-text-tertiary) hover:text-(--color-text-primary) transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/" className="text-sm text-gray-500 hover:text-white transition-colors">
+              <Link href="/" className="text-sm text-(--color-text-tertiary) hover:text-(--color-text-primary) transition-colors">
                 Cookie Settings
               </Link>
             </div>

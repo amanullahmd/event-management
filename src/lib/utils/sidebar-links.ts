@@ -32,8 +32,8 @@ export interface SidebarLink {
  * Get role-specific sidebar links with icons
  */
 export function getRoleSidebarLinks(role?: string): SidebarLink[] {
-  switch (role) {
-    case 'admin':
+  switch (role?.toUpperCase()) {
+    case 'ADMIN':
       return [
         { 
           label: 'Dashboard', 
@@ -84,7 +84,7 @@ export function getRoleSidebarLinks(role?: string): SidebarLink[] {
           description: 'Account settings'
         },
       ];
-    case 'organizer':
+    case 'ORGANIZER':
       return [
         { 
           label: 'Dashboard', 
@@ -129,7 +129,7 @@ export function getRoleSidebarLinks(role?: string): SidebarLink[] {
           description: 'Account settings'
         },
       ];
-    case 'customer':
+    case 'CUSTOMER':
       return [
         { 
           label: 'Dashboard', 

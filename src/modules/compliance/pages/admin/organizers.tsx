@@ -3,9 +3,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getAllOrganizers, updateOrganizerVerificationStatus } from '@/modules/shared-common/services/apiService';
 import { OrganizerProfile } from '@/lib/types/user';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -13,14 +13,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/modules/shared-common/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/modules/shared-common/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/modules/shared-common/components/ui/alert-dialog';
 
 /**
  * Admin Organizer Management Page

@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+'use client';
 
-interface Alert {
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Spinner } from '@/modules/shared-common/components/ui/spinner';
+
+interface AlertItem {
   type: string;
   message: string;
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
@@ -26,7 +31,7 @@ interface StaffingRecommendation {
 interface RealTimeInsights {
   eventId: string;
   flowStatus: 'NORMAL' | 'HIGH' | 'LOW';
-  activeAlerts: Alert[];
+  activeAlerts: AlertItem[];
   estimatedTimeToCapacity: number;
   stationMetrics: StationThroughput[];
   recommendations: StaffingRecommendation[];
@@ -37,20 +42,43 @@ interface RealTimeInsightsPanelProps {
   insights?: RealTimeInsights;
 }
 
+const FLOW_VARIANT: Record<string, 'success' | 'error' | 'warning'> = {
+  NORMAL: 'success',
+  HIGH: 'error',
+  LOW: 'warning',
+};
+
+const SEVERITY_VARIANT: Record<string, 'info' | 'warning' | 'error'> = {
+  INFO: 'info',
+  WARNING: 'warning',
+  CRITICAL: 'error',
+};
+
+const PRIORITY_VARIANT: Record<string, 'error' | 'warning' | 'info'> = {
+  HIGH: 'error',
+  MEDIUM: 'warning',
+  LOW: 'info',
+};
+
+const formatTimeToCapacity = (ms: number): string => {
+  if (ms < 0) return 'Already at capacity';
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+};
+
 /**
  * Real-time Insights Panel Component
- * 
+ *
  * Shows actionable insights and alerts.
- * 
+ *
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9
  */
 export const RealTimeInsightsPanel: React.FC<RealTimeInsightsPanelProps> = ({
   eventId: propEventId,
-  insights: propInsights
+  insights: propInsights,
 }) => {
-  const router = useRouter();
   const eventId = propEventId;
-
   const [insights, setInsights] = useState<RealTimeInsights | null>(propInsights || null);
   const [loading, setLoading] = useState(!propInsights);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +89,6 @@ export const RealTimeInsightsPanel: React.FC<RealTimeInsightsPanelProps> = ({
       setInsights(propInsights);
       return;
     }
-
     if (!eventId) return;
 
     const fetchInsights = async () => {
@@ -69,8 +96,7 @@ export const RealTimeInsightsPanel: React.FC<RealTimeInsightsPanelProps> = ({
         setLoading(true);
         const response = await fetch(`/api/events/${eventId}/analytics/insights`);
         if (!response.ok) throw new Error('Failed to fetch insights');
-        const result = await response.json();
-        setInsights(result);
+        setInsights(await response.json());
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -80,217 +106,157 @@ export const RealTimeInsightsPanel: React.FC<RealTimeInsightsPanelProps> = ({
     };
 
     fetchInsights();
-    const interval = setInterval(fetchInsights, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchInsights, 5000);
     return () => clearInterval(interval);
   }, [eventId, propInsights]);
 
-  const getFlowStatusColor = (status: string): string => {
-    switch (status) {
-      case 'NORMAL':
-        return '#10b981'; // Green
-      case 'HIGH':
-        return '#ef4444'; // Red
-      case 'LOW':
-        return '#f59e0b'; // Yellow
-      default:
-        return '#6b7280'; // Gray
-    }
-  };
-
-  const getFlowStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'NORMAL':
-        return 'Normal Flow';
-      case 'HIGH':
-        return 'High Flow';
-      case 'LOW':
-        return 'Low Flow';
-      default:
-        return 'Unknown';
-    }
-  };
-
-  const getSeverityColor = (severity: string): string => {
-    switch (severity) {
-      case 'INFO':
-        return 'bg-blue-50 border-blue-200';
-      case 'WARNING':
-        return 'bg-yellow-50 border-yellow-200';
-      case 'CRITICAL':
-        return 'bg-red-50 border-red-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getSeverityIcon = (severity: string): string => {
-    switch (severity) {
-      case 'INFO':
-        return 'ℹ️';
-      case 'WARNING':
-        return '⚠️';
-      case 'CRITICAL':
-        return '🚨';
-      default:
-        return '•';
-    }
-  };
-
-  const formatTimeToCapacity = (ms: number): string => {
-    if (ms < 0) return 'Already at capacity';
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    }
-    return `${seconds}s`;
-  };
-
-  const visibleAlerts = insights?.activeAlerts.filter(
-    (_, idx) => !dismissedAlerts.has(idx.toString())
-  ) || [];
-
   if (loading && !insights) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Spinner size="lg" label="Loading insights..." />
+      </div>
+    );
   }
 
   if (error && !insights) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+    return (
+      <Card variant="outlined" className="border-(--color-error)">
+        <CardContent className="p-6 text-(--color-error)">Error: {error}</CardContent>
+      </Card>
+    );
   }
 
   if (!insights) {
-    return <div className="p-4">No data available</div>;
+    return (
+      <Card variant="outlined">
+        <CardContent className="p-6 text-(--color-text-secondary)">No data available</CardContent>
+      </Card>
+    );
   }
 
+  const visibleAlerts = insights.activeAlerts.filter((_, idx) => !dismissedAlerts.has(idx.toString()));
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-6">Real-time Insights</h2>
-
-      {/* Entry Flow Status */}
-      <div
-        className="p-4 rounded-lg mb-6"
-        style={{ backgroundColor: `${getFlowStatusColor(insights.flowStatus)}20` }}
-      >
-        <p className="text-gray-600 text-sm">Entry Flow Status</p>
-        <p
-          className="text-3xl font-bold"
-          style={{ color: getFlowStatusColor(insights.flowStatus) }}
-        >
-          {getFlowStatusLabel(insights.flowStatus)}
-        </p>
+    <div className="space-y-4">
+      {/* Flow status + time to capacity */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card variant="elevated">
+          <CardContent className="p-4">
+            <p className="text-sm text-(--color-text-secondary)">Entry Flow Status</p>
+            <div className="mt-2">
+              <Badge variant={FLOW_VARIANT[insights.flowStatus] ?? 'secondary'} size="lg">
+                {insights.flowStatus === 'NORMAL' ? 'Normal Flow' : insights.flowStatus === 'HIGH' ? 'High Flow' : 'Low Flow'}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        <Card variant="elevated">
+          <CardContent className="p-4">
+            <p className="text-sm text-(--color-text-secondary)">Estimated Time to Capacity</p>
+            <p className="text-2xl font-bold text-(--color-secondary) mt-1">
+              {formatTimeToCapacity(insights.estimatedTimeToCapacity)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Time to Capacity */}
-      <div className="bg-purple-50 p-4 rounded-lg mb-6">
-        <p className="text-gray-600 text-sm">Estimated Time to Capacity</p>
-        <p className="text-2xl font-bold text-purple-600">
-          {formatTimeToCapacity(insights.estimatedTimeToCapacity)}
-        </p>
-      </div>
-
-      {/* Active Alerts */}
+      {/* Active alerts */}
       {visibleAlerts.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Active Alerts</h3>
-          <div className="space-y-3">
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Active Alerts</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {visibleAlerts.map((alert, idx) => (
               <div
                 key={idx}
-                className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}
+                className="flex items-start justify-between gap-3 rounded-lg border border-(--color-border) bg-(--color-surface) p-3"
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-3 flex-1">
-                    <span className="text-xl">{getSeverityIcon(alert.severity)}</span>
-                    <div>
-                      <p className="font-medium">{alert.type}</p>
-                      <p className="text-sm text-gray-600">{alert.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(alert.timestamp).toLocaleTimeString()}
-                      </p>
-                    </div>
+                <div className="flex items-start gap-3 flex-1">
+                  <Badge variant={SEVERITY_VARIANT[alert.severity] ?? 'secondary'} dot className="mt-0.5">
+                    {alert.severity}
+                  </Badge>
+                  <div>
+                    <p className="font-medium text-(--color-text-primary)">{alert.type}</p>
+                    <p className="text-sm text-(--color-text-secondary)">{alert.message}</p>
+                    <p className="text-xs text-(--color-text-tertiary) mt-1">
+                      {new Date(alert.timestamp).toLocaleTimeString()}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      const newDismissed = new Set(dismissedAlerts);
-                      newDismissed.add(idx.toString());
-                      setDismissedAlerts(newDismissed);
-                    }}
-                    className="text-gray-400 hover:text-gray-600 ml-2"
-                  >
-                    ✕
-                  </button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Dismiss alert"
+                  onClick={() => {
+                    const next = new Set(dismissedAlerts);
+                    next.add(idx.toString());
+                    setDismissedAlerts(next);
+                  }}
+                >
+                  ✕
+                </Button>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Check-in Stations */}
+      {/* Check-in stations */}
       {insights.stationMetrics.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Active Check-in Stations</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {insights.stationMetrics.map((station) => (
-              <div key={station.stationId} className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between items-start mb-2">
-                  <p className="font-medium">{station.stationName}</p>
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      station.status === 'ACTIVE'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {station.status}
-                  </span>
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Check-in Stations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {insights.stationMetrics.map((station) => (
+                <div
+                  key={station.stationId}
+                  className="rounded-lg bg-(--color-surface) border border-(--color-border) p-3"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-medium text-(--color-text-primary)">{station.stationName}</p>
+                    <Badge variant={station.status === 'ACTIVE' ? 'success' : 'secondary'} size="sm">
+                      {station.status}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-(--color-text-secondary)">
+                    {station.throughputRate.toFixed(1)} check-ins/min
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Throughput: {station.throughputRate.toFixed(1)} check-ins/min
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Staffing Recommendations */}
+      {/* Staffing recommendations */}
       {insights.recommendations.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Staffing Recommendations</h3>
-          <div className="space-y-3">
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Staffing Recommendations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {insights.recommendations.map((rec) => (
               <div
                 key={rec.id}
-                className={`p-4 rounded-lg border-l-4 ${
-                  rec.priority === 'HIGH'
-                    ? 'border-red-500 bg-red-50'
-                    : rec.priority === 'MEDIUM'
-                    ? 'border-yellow-500 bg-yellow-50'
-                    : 'border-blue-500 bg-blue-50'
-                }`}
+                className="rounded-lg bg-(--color-surface) border border-(--color-border) p-3"
               >
-                <p className="font-medium">{rec.recommendation}</p>
-                <p className="text-sm text-gray-600 mt-1">{rec.reasoning}</p>
-                <span
-                  className={`inline-block text-xs px-2 py-1 rounded mt-2 ${
-                    rec.priority === 'HIGH'
-                      ? 'bg-red-100 text-red-800'
-                      : rec.priority === 'MEDIUM'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {rec.priority} Priority
-                </span>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="font-medium text-(--color-text-primary)">{rec.recommendation}</p>
+                  <Badge variant={PRIORITY_VARIANT[rec.priority] ?? 'secondary'} size="sm">
+                    {rec.priority}
+                  </Badge>
+                </div>
+                <p className="text-sm text-(--color-text-secondary)">{rec.reasoning}</p>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 };
 
 export default RealTimeInsightsPanel;
-

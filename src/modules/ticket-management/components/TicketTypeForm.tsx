@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
 
 interface TicketTypeFormProps {
   onSubmit: (data: {

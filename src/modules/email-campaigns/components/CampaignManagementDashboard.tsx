@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/modules/shared-common/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
+import { Input } from '@/modules/shared-common/components/ui/input';
 import { Eye, Edit2, Trash2, Pause, Play } from 'lucide-react';
 
 export interface Campaign {
@@ -48,7 +48,7 @@ const getCampaignTypeLabel = (type: string): string => {
   }
 };
 
-const getStatusColor = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+const getStatusColor = (status: string): 'default' | 'secondary' | 'error' | 'outline' => {
   switch (status) {
     case 'ACTIVE':
       return 'default';

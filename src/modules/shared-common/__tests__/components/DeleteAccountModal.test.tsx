@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DeleteAccountModal from '@/components/shared/DeleteAccountModal';
+import DeleteAccountModal from '@/modules/shared-common/components/shared/DeleteAccountModal';
 import * as api from '@/modules/shared-common/utils/api';
 
 // Mock the API

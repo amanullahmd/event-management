@@ -222,6 +222,7 @@ export function EventCard({
             src={event.image || '/placeholder-event.jpg'}
             alt={event.name}
             fill
+            loading="lazy"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </div>
@@ -273,6 +274,7 @@ export function EventCard({
             src={event.image || '/placeholder-event.jpg'}
             alt={event.name}
             fill
+            loading="lazy"
             className="object-cover group-hover:scale-110 transition-transform duration-500"
           />
           
@@ -376,6 +378,7 @@ export function EventCard({
           src={event.image || '/placeholder-event.jpg'}
           alt={event.name}
           fill
+          loading="lazy"
           className="object-cover group-hover:scale-110 transition-transform duration-500"
         />
         

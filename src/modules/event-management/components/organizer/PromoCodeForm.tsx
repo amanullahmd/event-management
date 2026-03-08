@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Label } from '@/modules/shared-common/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/modules/shared-common/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Alert, AlertDescription } from '@/modules/shared-common/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface PromoCodeFormProps {
@@ -120,7 +120,7 @@ export const PromoCodeForm: React.FC<PromoCodeFormProps> = ({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="error">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>

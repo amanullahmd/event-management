@@ -25,8 +25,8 @@
 
 import React from 'react';
 import { DollarSign } from 'lucide-react';
-import { Carousel } from '@/components/shared/Carousel';
-import { EventCard, ExtendedEvent } from '@/components/shared/EventCard';
+import { Carousel } from '@/modules/shared-common/components/shared/Carousel';
+import { EventCard, ExtendedEvent } from '@/modules/shared-common/components/shared/EventCard';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface PriceSectionProps {

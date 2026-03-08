@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks';
 import { getEventsByOrganizerId } from '@/modules/shared-common/services/apiService';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
 import type { TicketType } from '@/lib/types';
 

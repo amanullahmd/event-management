@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/modules/shared-common/components/ui/select';
+import { Label } from '@/modules/shared-common/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
 import { FileText, CheckCircle, XCircle } from 'lucide-react';
 import type { ConsentAuditEntry, ConsentType } from '@/lib/types/gdpr';
 
@@ -117,7 +117,7 @@ export const ConsentAuditTrailViewer: React.FC<ConsentAuditTrailViewerProps> = (
                       {getConsentTypeLabel(entry.consentType)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={entry.action === 'GRANTED' ? 'default' : 'destructive'}>
+                      <Badge variant={entry.action === 'GRANTED' ? 'default' : 'error'}>
                         {entry.action === 'GRANTED' ? (
                           <span className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3" aria-hidden="true" /> Granted

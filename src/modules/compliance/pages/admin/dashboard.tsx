@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MetricCard } from '@/components/admin/MetricCard';
-import { ActivityFeed } from '@/components/admin/ActivityFeed';
-import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
-import { getDashboardMetrics, getAllUsers } from '@/lib/api/admin';
+import { MetricCard } from '@/modules/shared-common/components/admin/MetricCard';
+import { ActivityFeed } from '@/modules/shared-common/components/admin/ActivityFeed';
+import { AnalyticsCharts } from '@/modules/shared-common/components/admin/AnalyticsCharts';
 import { getDashboardData } from '@/modules/shared-common/services/apiService';
 import type { User } from '@/modules/shared-common/services/apiService';
 

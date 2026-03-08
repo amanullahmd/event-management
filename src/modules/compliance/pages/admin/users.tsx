@@ -10,9 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from '@/modules/shared-common/components/ui/table';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from '@/modules/shared-common/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,8 +29,8 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
+} from '@/modules/shared-common/components/ui/alert-dialog';
+import { Input } from '@/modules/shared-common/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -147,13 +147,13 @@ export default function UserManagementPage() {
         Active
       </Badge>
     ) : (
-      <Badge variant="destructive">Blocked</Badge>
+      <Badge variant="error">Blocked</Badge>
     );
   }, []);
 
   const getRoleBadge = useCallback((role: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
-      admin: 'destructive',
+    const variants: Record<string, 'default' | 'secondary' | 'error'> = {
+      admin: 'error',
       organizer: 'default',
       customer: 'secondary',
     };

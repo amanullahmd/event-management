@@ -4,8 +4,8 @@ import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { getAllEvents, getAllOrders } from '@/modules/shared-common/services/apiService';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { 
   TrendingUp, 
   TrendingDown, 

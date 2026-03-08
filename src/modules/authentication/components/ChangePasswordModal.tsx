@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { apiPost } from '@/modules/shared-common/utils/api';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/modules/shared-common/components/ui/dialog';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Alert } from '@/modules/shared-common/components/ui/alert';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -96,27 +100,21 @@ export default function ChangePasswordModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 p-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Change Password
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Update your account password
-          </p>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogDescription>Update your account password</DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="space-y-4">
           {/* Current Password */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Current Password
             </label>
             <div className="relative">
-              <input
+              <Input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => {
@@ -125,7 +123,6 @@ export default function ChangePasswordModal({
                 }}
                 placeholder="Enter current password"
                 disabled={isLoading}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               />
               <button
                 type="button"
@@ -143,7 +140,7 @@ export default function ChangePasswordModal({
               New Password
             </label>
             <div className="relative">
-              <input
+              <Input
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => {
@@ -152,7 +149,6 @@ export default function ChangePasswordModal({
                 }}
                 placeholder="Enter new password"
                 disabled={isLoading}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               />
               <button
                 type="button"
@@ -189,7 +185,7 @@ export default function ChangePasswordModal({
               Confirm Password
             </label>
             <div className="relative">
-              <input
+              <Input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => {
@@ -198,7 +194,6 @@ export default function ChangePasswordModal({
                 }}
                 placeholder="Confirm new password"
                 disabled={isLoading}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               />
               <button
                 type="button"
@@ -212,31 +207,28 @@ export default function ChangePasswordModal({
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-            </div>
+            <Alert variant="error" title="Error" message={error} />
           )}
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-slate-200 dark:border-slate-800 p-6 flex gap-3">
-          <button
+        <DialogFooter>
+          <Button
             onClick={handleClose}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            variant="outline"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleChangePassword}
             disabled={isLoading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
-            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            variant="default"
           >
             {isLoading ? 'Changing...' : 'Change Password'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

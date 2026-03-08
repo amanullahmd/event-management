@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LocationProvider, useLocation } from '@/lib/context/LocationContext';
-import { HeroSection } from '@/components/landing/HeroSection';
-import { TabFilter } from '@/components/landing/TabFilter';
-import { TrendingSection } from '@/components/landing/TrendingSection';
-import { FeaturedCalendars } from '@/components/landing/FeaturedCalendars';
-import { PriceSection } from '@/components/landing/PriceSection';
-import { ThisWeekSection } from '@/components/landing/ThisWeekSection';
-import { CategoryInterests } from '@/components/landing/CategoryInterests';
-import { PopularCities } from '@/components/landing/PopularCities';
-import { SocialProofSection } from '@/components/landing/SocialProofSection';
-import { CreateEventCTA } from '@/components/landing/CreateEventCTA';
+import { HeroSection } from '@/modules/shared-common/components/landing/HeroSection';
+import { TabFilter } from '@/modules/shared-common/components/landing/TabFilter';
+import { TrendingSection } from '@/modules/shared-common/components/landing/TrendingSection';
+import { FeaturedCalendars } from '@/modules/shared-common/components/landing/FeaturedCalendars';
+import { PriceSection } from '@/modules/shared-common/components/landing/PriceSection';
+import { ThisWeekSection } from '@/modules/shared-common/components/landing/ThisWeekSection';
+import { CategoryInterests } from '@/modules/shared-common/components/landing/CategoryInterests';
+import { PopularCities } from '@/modules/shared-common/components/landing/PopularCities';
+import { SocialProofSection } from '@/modules/shared-common/components/landing/SocialProofSection';
+import { CreateEventCTA } from '@/modules/shared-common/components/landing/CreateEventCTA';
 import { useEventFilters } from '@/lib/hooks/useEventFilters';
 import {
   mockFeaturedCalendars,
@@ -21,7 +21,7 @@ import {
 } from '@/lib/mock-landing-data';
 import { getAllEvents } from '@/modules/shared-common/services/apiService';
 import type { Event } from '@/lib/types/event';
-import type { ExtendedEvent } from '@/components/shared/EventCard';
+import type { ExtendedEvent } from '@/modules/shared-common/components/shared/EventCard';
 
 /**
  * Landing page content component

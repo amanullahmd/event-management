@@ -25,8 +25,8 @@
 
 import React from 'react';
 import { Award } from 'lucide-react';
-import { Carousel } from '@/components/shared/Carousel';
-import { TestimonialCard, Testimonial } from '@/components/shared/TestimonialCard';
+import { Carousel } from '@/modules/shared-common/components/shared/Carousel';
+import { TestimonialCard, Testimonial } from '@/modules/shared-common/components/shared/TestimonialCard';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface TrustMetrics {

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { memo, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectOption } from '@/components/ui/select';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Select, SelectOption } from '@/modules/shared-common/components/ui/select';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 
 export interface EventFilterValues {

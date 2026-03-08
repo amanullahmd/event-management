@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import { formatErrorMessage } from '@/modules/shared-common/utils/error-formatter';
-import { useToast } from '@/components/shared/ToastContainer';
+import { useToast } from '@/modules/shared-common/components/shared/ToastContainer';
 import type { Event } from '@/lib/types';
 
 interface PublishUnpublishButtonProps {

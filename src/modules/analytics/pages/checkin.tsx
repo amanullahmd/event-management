@@ -10,8 +10,8 @@ import {
   getUserById
 } from '@/modules/shared-common/services/apiService';
 import { getTicketByQrCode } from '@/modules/shared-common/services/apiService';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
 
 type Event = Awaited<ReturnType<typeof getEventsByOrganizerId>>[number];
 type Ticket = Awaited<ReturnType<typeof getTicketsByEventId>>[number];

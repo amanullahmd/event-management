@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { apiGet } from '@/modules/shared-common/utils/api';
 import type { EventHistoryItem } from '@/lib/types/organizer-trust-profiles';
 import type { PaginatedResponse } from '@/modules/shared-common/types/api';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
 
 interface EventHistoryComponentProps {
   organizerId: string;

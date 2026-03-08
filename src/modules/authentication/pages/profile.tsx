@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiPut, apiGet } from '@/modules/shared-common/utils/api';
-import DeleteAccountModal from '@/components/shared/DeleteAccountModal';
 import ChangePasswordModal from '@/modules/authentication/components/ChangePasswordModal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Alert } from '@/modules/shared-common/components/ui/alert';
 
 interface CustomerProfile {
   firstName: string;
@@ -24,8 +28,6 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
   
@@ -196,228 +198,202 @@ export default function ProfilePage() {
       </div>
 
       {showSuccess && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-green-700 dark:text-green-400 font-medium">Profile updated successfully!</p>
-        </div>
+        <Alert variant="success" title="Success" message="Profile updated successfully!" />
       )}
 
       {changePasswordSuccess && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-green-700 dark:text-green-400 font-medium">Password changed successfully!</p>
-        </div>
+        <Alert variant="success" title="Success" message="Password changed successfully!" />
       )}
 
-      {deleteSuccess && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-green-700 dark:text-green-400 font-medium">Account deleted successfully. Redirecting to login...</p>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+      <Card>
         <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                {fullName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{fullName}</h2>
-                <p className="text-slate-500 dark:text-slate-400">{profile.email}</p>
-                <p className="text-sm text-indigo-600 dark:text-indigo-400 capitalize mt-1">
-                  {user?.role || 'Customer'} Account
-                </p>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+              {fullName.charAt(0).toUpperCase()}
             </div>
-            <div className="flex gap-2">
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                >
-                  ✏️ Edit Profile
-                </button>
-              )}
-              <button
-                onClick={() => setShowChangePasswordModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                🔐 Change Password
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                🗑️ Delete Account
-              </button>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{fullName}</h2>
+              <p className="text-slate-500 dark:text-slate-400">{profile.email}</p>
+              <p className="text-sm text-indigo-600 dark:text-indigo-400 capitalize mt-1">
+                {user?.role || 'Customer'} Account
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">First Name</label>
-              <div className="relative">
-                <input
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="w-full justify-start border-b border-slate-200 dark:border-slate-800 rounded-none bg-transparent p-0">
+            <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+              Profile Info
+            </TabsTrigger>
+            <TabsTrigger value="security" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+              Preferences
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">First Name</label>
+                <Input
                   type="text"
                   value={profile.firstName}
                   onChange={(e) => handleChange('firstName', e.target.value)}
                   disabled={!isEditing}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed ${
-                    errors.firstName ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                  } bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+                  error={errors.firstName}
                 />
-                {isEditing && !errors.firstName && profile.firstName.trim() && (
-                  <span className="absolute right-3 top-2.5 text-green-500">✓</span>
-                )}
+                {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
               </div>
-              {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Last Name</label>
-              <div className="relative">
-                <input
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Last Name</label>
+                <Input
                   type="text"
                   value={profile.lastName}
                   onChange={(e) => handleChange('lastName', e.target.value)}
                   disabled={!isEditing}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed ${
-                    errors.lastName ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                  } bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+                  error={errors.lastName}
                 />
-                {isEditing && !errors.lastName && profile.lastName.trim() && (
-                  <span className="absolute right-3 top-2.5 text-green-500">✓</span>
-                )}
+                {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
               </div>
-              {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email Address</label>
-              <input
-                type="email"
-                value={profile.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                disabled={true}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed ${
-                  errors.email ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                } bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
-              />
-              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email Address</label>
+                <Input
+                  type="email"
+                  value={profile.email}
+                  disabled={true}
+                  error={errors.email}
+                />
+                {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Phone Number</label>
-              <div className="relative">
-                <input
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Phone Number</label>
+                <Input
                   type="tel"
                   value={profile.phoneNumber}
                   onChange={(e) => handleChange('phoneNumber', e.target.value)}
                   disabled={!isEditing}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed ${
-                    errors.phoneNumber ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                  } bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+                  error={errors.phoneNumber}
                 />
-                {isEditing && !errors.phoneNumber && profile.phoneNumber.trim() && (
-                  <span className="absolute right-3 top-2.5 text-green-500">✓</span>
-                )}
+                {errors.phoneNumber && <p className="mt-1 text-sm text-red-500">{errors.phoneNumber}</p>}
               </div>
-              {errors.phoneNumber && <p className="mt-1 text-sm text-red-500">{errors.phoneNumber}</p>}
-            </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Street Address</label>
-              <input
-                type="text"
-                value={profile.streetAddress}
-                onChange={(e) => handleChange('streetAddress', e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Street Address</label>
+                <Input
+                  type="text"
+                  value={profile.streetAddress}
+                  onChange={(e) => handleChange('streetAddress', e.target.value)}
+                  disabled={!isEditing}
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">City</label>
-              <input
-                type="text"
-                value={profile.city}
-                onChange={(e) => handleChange('city', e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">City</label>
+                <Input
+                  type="text"
+                  value={profile.city}
+                  onChange={(e) => handleChange('city', e.target.value)}
+                  disabled={!isEditing}
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">State / Province</label>
-              <input
-                type="text"
-                value={profile.stateProvince}
-                onChange={(e) => handleChange('stateProvince', e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">State / Province</label>
+                <Input
+                  type="text"
+                  value={profile.stateProvince}
+                  onChange={(e) => handleChange('stateProvince', e.target.value)}
+                  disabled={!isEditing}
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ZIP / Postal Code</label>
-              <div className="relative">
-                <input
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ZIP / Postal Code</label>
+                <Input
                   type="text"
                   value={profile.zipPostalCode}
                   onChange={(e) => handleChange('zipPostalCode', e.target.value)}
                   disabled={!isEditing}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed ${
-                    errors.zipPostalCode ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                  } bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+                  error={errors.zipPostalCode}
                 />
-                {isEditing && !errors.zipPostalCode && profile.zipPostalCode.trim() && (
-                  <span className="absolute right-3 top-2.5 text-green-500">✓</span>
-                )}
+                {errors.zipPostalCode && <p className="mt-1 text-sm text-red-500">{errors.zipPostalCode}</p>}
               </div>
-              {errors.zipPostalCode && <p className="mt-1 text-sm text-red-500">{errors.zipPostalCode}</p>}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Country</label>
+                <Input
+                  type="text"
+                  value={profile.country}
+                  onChange={(e) => handleChange('country', e.target.value)}
+                  disabled={!isEditing}
+                />
+              </div>
             </div>
 
+            {isEditing && (
+              <div className="flex gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || Object.keys(errors).length > 0}
+                  variant="default"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setErrors({});
+                  }}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="flex gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  variant="default"
+                >
+                  Edit Profile
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="security" className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Country</label>
-              <input
-                type="text"
-                value={profile.country}
-                onChange={(e) => handleChange('country', e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {isEditing && (
-            <div className="flex gap-3 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-              <button
-                onClick={handleSave}
-                disabled={isSaving || Object.keys(errors).length > 0}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Password & Security</h3>
+              <Button
+                onClick={() => setShowChangePasswordModal(true)}
+                variant="default"
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setErrors({});
-                }}
-                className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
-              >
-                Cancel
-              </button>
+                Change Password
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
+          </TabsContent>
 
-      <DeleteAccountModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onSuccess={() => setDeleteSuccess(true)}
-      />
+          <TabsContent value="preferences" className="p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Theme Preference</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">Choose your preferred theme for the platform</p>
+              <div className="flex gap-4">
+                <Button variant="outline">Light Mode</Button>
+                <Button variant="outline">Dark Mode</Button>
+                <Button variant="outline">System Default</Button>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </Card>
 
       <ChangePasswordModal
         isOpen={showChangePasswordModal}

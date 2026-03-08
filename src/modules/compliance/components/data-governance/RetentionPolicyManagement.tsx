@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Label } from '@/modules/shared-common/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
+import { Alert, AlertDescription } from '@/modules/shared-common/components/ui/alert';
 import { Shield, Plus, Trash2, Play, Edit } from 'lucide-react';
 import type { RetentionPolicy, CreateRetentionPolicyRequest } from '@/lib/types/data-residency';
 
@@ -27,7 +27,7 @@ export const RetentionPolicyManagement: React.FC<RetentionPolicyManagementProps>
   const fetchPolicies = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiBaseUrl}/api/data-governance/retention-policies`, {
+      const response = await fetch(`${apiBaseUrl}/data-governance/retention-policies`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -46,7 +46,7 @@ export const RetentionPolicyManagement: React.FC<RetentionPolicyManagementProps>
 
   const handleCreate = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/data-governance/retention-policies`, {
+      const response = await fetch(`${apiBaseUrl}/data-governance/retention-policies`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -62,7 +62,7 @@ export const RetentionPolicyManagement: React.FC<RetentionPolicyManagementProps>
 
   const handleDeactivate = async (id: string) => {
     try {
-      await fetch(`${apiBaseUrl}/api/data-governance/retention-policies/${id}`, {
+      await fetch(`${apiBaseUrl}/data-governance/retention-policies/${id}`, {
         method: 'DELETE', credentials: 'include',
       });
       fetchPolicies();
@@ -73,7 +73,7 @@ export const RetentionPolicyManagement: React.FC<RetentionPolicyManagementProps>
 
   const handleExecute = async (id: string) => {
     try {
-      await fetch(`${apiBaseUrl}/api/data-governance/retention-policies/${id}/execute`, {
+      await fetch(`${apiBaseUrl}/data-governance/retention-policies/${id}/execute`, {
         method: 'POST', credentials: 'include',
       });
       setError(null);
@@ -88,7 +88,7 @@ export const RetentionPolicyManagement: React.FC<RetentionPolicyManagementProps>
 
   return (
     <div className="space-y-4">
-      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && <Alert variant="error"><AlertDescription>{error}</AlertDescription></Alert>}
 
       <Card>
         <CardHeader>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { StatusBadge } from '../../../components/organizer/StatusBadge';
+import { StatusBadge } from './organizer/StatusBadge';
 import { PublishUnpublishButton } from './PublishUnpublishButton';
 import { isConflictError } from '@/modules/shared-common/utils/error-formatter';
 import type { Event } from '@/lib/types';

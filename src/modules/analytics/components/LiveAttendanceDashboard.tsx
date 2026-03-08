@@ -1,5 +1,10 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Spinner } from '@/modules/shared-common/components/ui/spinner';
+import { Progress } from '@/modules/shared-common/components/ui/progress';
 
 interface LiveAttendanceMetrics {
   eventId: string;
@@ -19,26 +24,30 @@ interface LiveAttendanceDashboardProps {
   onWebSocketConnect?: (handler: any) => void;
 }
 
+const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'secondary'> = {
+  NORMAL: 'success',
+  WARNING: 'warning',
+  CRITICAL: 'error',
+  FULL: 'secondary',
+};
+
 /**
  * Live Attendance Dashboard Component
- * 
+ *
  * Displays real-time check-in numbers and capacity status.
- * 
+ *
  * Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10
  */
 export const LiveAttendanceDashboard: React.FC<LiveAttendanceDashboardProps> = ({
   eventId: propEventId,
-  onWebSocketConnect
+  onWebSocketConnect,
 }) => {
-  const router = useRouter();
   const eventId = propEventId;
-
   const [metrics, setMetrics] = useState<LiveAttendanceMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
 
-  // Fetch live metrics
   useEffect(() => {
     if (!eventId) return;
 
@@ -58,171 +67,132 @@ export const LiveAttendanceDashboard: React.FC<LiveAttendanceDashboardProps> = (
     };
 
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchMetrics, 5000);
     return () => clearInterval(interval);
   }, [eventId]);
 
-  // Setup WebSocket connection
   useEffect(() => {
     if (!eventId) return;
-
     setConnectionStatus('connecting');
-    
-    // Simulate WebSocket connection
-    const connectWebSocket = () => {
-      try {
-        // In a real implementation, this would establish a WebSocket connection
-        setConnectionStatus('connected');
-        
-        if (onWebSocketConnect) {
-          onWebSocketConnect({
-            onUpdate: (data: LiveAttendanceMetrics) => {
-              setMetrics(data);
-            },
-            onError: (error: Error) => {
-              setError(error.message);
-              setConnectionStatus('disconnected');
-            }
-          });
-        }
-      } catch (err) {
-        setConnectionStatus('disconnected');
-        setError(err instanceof Error ? err.message : 'WebSocket connection failed');
+    try {
+      setConnectionStatus('connected');
+      if (onWebSocketConnect) {
+        onWebSocketConnect({
+          onUpdate: (data: LiveAttendanceMetrics) => setMetrics(data),
+          onError: (err: Error) => {
+            setError(err.message);
+            setConnectionStatus('disconnected');
+          },
+        });
       }
-    };
-
-    connectWebSocket();
+    } catch (err) {
+      setConnectionStatus('disconnected');
+    }
   }, [eventId, onWebSocketConnect]);
 
-  const getCapacityStatusColor = (status: string): string => {
-    switch (status) {
-      case 'NORMAL':
-        return '#10b981'; // Green
-      case 'WARNING':
-        return '#f59e0b'; // Yellow
-      case 'CRITICAL':
-        return '#ef4444'; // Red
-      case 'FULL':
-        return '#7c3aed'; // Purple
-      default:
-        return '#6b7280'; // Gray
-    }
-  };
-
-  const getCapacityStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'NORMAL':
-        return 'Normal';
-      case 'WARNING':
-        return 'Warning';
-      case 'CRITICAL':
-        return 'Critical';
-      case 'FULL':
-        return 'Full';
-      default:
-        return 'Unknown';
-    }
-  };
-
   if (loading && !metrics) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Spinner size="lg" label="Loading attendance data..." />
+      </div>
+    );
   }
 
   if (error && !metrics) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+    return (
+      <Card variant="outlined" className="border-(--color-error)">
+        <CardContent className="p-6 text-(--color-error)">Error: {error}</CardContent>
+      </Card>
+    );
   }
 
   if (!metrics) {
-    return <div className="p-4">No data available</div>;
+    return (
+      <Card variant="outlined">
+        <CardContent className="p-6 text-(--color-text-secondary)">No data available</CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Live Attendance Dashboard</h2>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full"
-            style={{
-              backgroundColor: connectionStatus === 'connected' ? '#10b981' : '#ef4444'
-            }}
-          />
-          <span className="text-sm text-gray-600">
-            {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <Card variant="elevated">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Live Attendance Dashboard</CardTitle>
+            <div className="flex items-center gap-2">
+              <span
+                className="w-2.5 h-2.5 rounded-full"
+                style={{
+                  backgroundColor:
+                    connectionStatus === 'connected'
+                      ? 'var(--color-success)'
+                      : 'var(--color-error)',
+                }}
+                aria-hidden="true"
+              />
+              <span className="text-sm text-(--color-text-secondary)">
+                {connectionStatus === 'connected' ? 'Live' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Key metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-lg bg-(--color-primary-light) p-4">
+              <p className="text-sm text-(--color-text-secondary)">Checked In</p>
+              <p className="text-3xl font-bold text-(--color-primary)">{metrics.checkedInCount}</p>
+            </div>
+            <div className="rounded-lg bg-(--color-surface) p-4 border border-(--color-border)">
+              <p className="text-sm text-(--color-text-secondary)">Capacity Status</p>
+              <div className="mt-1">
+                <Badge variant={STATUS_VARIANT[metrics.capacityStatus] ?? 'secondary'} size="lg">
+                  {metrics.capacityStatus}
+                </Badge>
+              </div>
+            </div>
+          </div>
 
-      {/* Main Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Checked-in Count */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-gray-600 text-sm">Checked In</p>
-          <p className="text-3xl font-bold text-blue-600">{metrics.checkedInCount}</p>
-        </div>
+          {/* Occupancy bar */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-(--color-text-secondary)">Occupancy</span>
+              <span className="text-sm font-semibold text-(--color-text-primary)">
+                {metrics.occupancyPercentage.toFixed(1)}%
+              </span>
+            </div>
+            <Progress value={Math.min(metrics.occupancyPercentage, 100)} />
+            <p className="text-xs text-(--color-text-tertiary) mt-1">
+              {metrics.checkedInCount} / {metrics.totalCapacity}
+            </p>
+          </div>
 
-        {/* Capacity Status */}
-        <div
-          className="p-4 rounded-lg"
-          style={{ backgroundColor: `${getCapacityStatusColor(metrics.capacityStatus)}20` }}
-        >
-          <p className="text-gray-600 text-sm">Capacity Status</p>
-          <p
-            className="text-3xl font-bold"
-            style={{ color: getCapacityStatusColor(metrics.capacityStatus) }}
-          >
-            {getCapacityStatusLabel(metrics.capacityStatus)}
+          {/* Secondary metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'No-Shows', value: metrics.noShowCount },
+              { label: 'Late Arrivals', value: metrics.lateArrivals },
+              { label: 'Early Arrivals', value: metrics.earlyArrivals },
+              { label: 'Attendance Rate', value: `${metrics.attendanceRate.toFixed(1)}%` },
+            ].map(({ label, value }) => (
+              <div
+                key={label}
+                className="rounded-lg bg-(--color-surface) border border-(--color-border) p-3 text-center"
+              >
+                <p className="text-xs text-(--color-text-secondary)">{label}</p>
+                <p className="text-xl font-bold text-(--color-text-primary) mt-1">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-(--color-text-tertiary) text-right">
+            Last updated: {new Date(metrics.lastUpdateTime).toLocaleTimeString()}
           </p>
-        </div>
-      </div>
-
-      {/* Occupancy Percentage */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-gray-600">Occupancy</p>
-          <p className="text-lg font-semibold">{metrics.occupancyPercentage.toFixed(1)}%</p>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-4">
-          <div
-            className="h-4 rounded-full transition-all"
-            style={{
-              width: `${Math.min(metrics.occupancyPercentage, 100)}%`,
-              backgroundColor: getCapacityStatusColor(metrics.capacityStatus)
-            }}
-          />
-        </div>
-        <p className="text-sm text-gray-500 mt-1">
-          {metrics.checkedInCount} / {metrics.totalCapacity}
-        </p>
-      </div>
-
-      {/* Additional Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-50 p-3 rounded">
-          <p className="text-gray-600 text-xs">No-Shows</p>
-          <p className="text-xl font-bold">{metrics.noShowCount}</p>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <p className="text-gray-600 text-xs">Late Arrivals</p>
-          <p className="text-xl font-bold">{metrics.lateArrivals}</p>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <p className="text-gray-600 text-xs">Early Arrivals</p>
-          <p className="text-xl font-bold">{metrics.earlyArrivals}</p>
-        </div>
-        <div className="bg-gray-50 p-3 rounded">
-          <p className="text-gray-600 text-xs">Attendance Rate</p>
-          <p className="text-xl font-bold">{metrics.attendanceRate.toFixed(1)}%</p>
-        </div>
-      </div>
-
-      {/* Last Update */}
-      <div className="text-right text-xs text-gray-500">
-        Last updated: {new Date(metrics.lastUpdateTime).toLocaleTimeString()}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default LiveAttendanceDashboard;
-

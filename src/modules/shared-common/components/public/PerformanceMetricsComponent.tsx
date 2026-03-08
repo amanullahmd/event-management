@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { PerformanceMetrics } from '@/lib/types/organizer-trust-profiles';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/modules/shared-common/components/ui/card';
 
 interface PerformanceMetricsComponentProps {
   metrics: PerformanceMetrics;

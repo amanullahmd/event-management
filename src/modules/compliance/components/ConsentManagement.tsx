@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Label } from '@/modules/shared-common/components/ui/label';
+import { Alert, AlertDescription } from '@/modules/shared-common/components/ui/alert';
 import { Shield, CheckCircle, XCircle, Clock } from 'lucide-react';
 import type { ConsentPreference, ConsentStatusResponse } from '@/lib/types/gdpr';
 
@@ -112,7 +112,7 @@ export const ConsentManagement: React.FC<ConsentManagementProps> = ({ apiBaseUrl
       </Card>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="error">
           <XCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>

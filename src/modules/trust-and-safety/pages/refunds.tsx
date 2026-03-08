@@ -11,7 +11,7 @@ import {
   getUserById,
   getEventById
 } from '@/modules/shared-common/services/apiService';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 import type { RefundRequest } from '@/lib/types';
 
 /**

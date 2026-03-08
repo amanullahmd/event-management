@@ -78,6 +78,7 @@ export function CityCard({
         src={city.image}
         alt={city.name}
         fill
+        loading="lazy"
         className="object-cover group-hover:scale-110 transition-transform duration-500"
       />
 

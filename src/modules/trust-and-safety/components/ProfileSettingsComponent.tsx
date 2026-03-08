@@ -6,9 +6,9 @@ import type {
   VisibilitySettings,
   UpdateVisibilitySettingsRequest,
 } from '@/lib/types/organizer-trust-profiles';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 
 interface ProfileSettingsComponentProps {
   organizerId: string;

@@ -21,8 +21,8 @@
 
 import React from 'react';
 import { BookOpen } from 'lucide-react';
-import { Carousel } from '@/components/shared/Carousel';
-import { FeaturedCalendarCard, FeaturedCalendar } from '@/components/shared/FeaturedCalendarCard';
+import { Carousel } from '@/modules/shared-common/components/shared/Carousel';
+import { FeaturedCalendarCard, FeaturedCalendar } from '@/modules/shared-common/components/shared/FeaturedCalendarCard';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface FeaturedCalendarsProps {

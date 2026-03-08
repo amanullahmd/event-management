@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { getEventById, getAllOrders, type Order, type Event } from '@/modules/shared-common/services/apiService';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
 
 /**
  * Event Analytics Page for Organizers

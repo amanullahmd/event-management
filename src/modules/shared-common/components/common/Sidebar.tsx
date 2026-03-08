@@ -72,13 +72,13 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 shadow-xl transition-all duration-300 z-40 md:relative md:translate-x-0 md:shadow-none ${
+        className={`fixed left-0 top-0 h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl transition-all duration-300 z-40 md:relative md:translate-x-0 md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${isCollapsed ? 'md:w-20' : 'md:w-72'} w-72`}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar header */}
-          <div className="p-4 border-b border-gray-200 dark:border-slate-800">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between">
               {!isCollapsed && (
                 <div className="flex items-center gap-3">
@@ -86,10 +86,10 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                     <span className="text-white font-bold text-lg">E</span>
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                       {title}
                     </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {user?.role === 'ADMIN' ? 'Admin Panel' : user?.role === 'ORGANIZER' ? 'Organizer Portal' : 'My Account'}
                     </p>
                   </div>
@@ -103,7 +103,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsCollapsed(!isCollapsed)}
-                  className="hidden md:flex p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  className="hidden md:flex p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                   aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   {isCollapsed ? (
@@ -114,7 +114,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
+                  className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                   aria-label="Close sidebar"
                 >
                   <X className="w-5 h-5" />
@@ -134,7 +134,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                   className={`flex items-center justify-between px-3 py-3 text-sm font-medium rounded-xl transition-all group ${
                     isActive
                       ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   onClick={() => setIsOpen(false)}
                   title={isCollapsed ? link.label : undefined}
@@ -149,7 +149,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                       <div className="min-w-0">
                         <span className="block truncate">{link.label}</span>
                         {link.description && !isActive && (
-                          <span className="block text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          <span className="block text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                             {link.description}
                           </span>
                         )}
@@ -171,9 +171,9 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
           </nav>
 
           {/* User info and logout */}
-          <div className="border-t border-gray-200 dark:border-slate-800 p-3 space-y-3">
+          <div className="border-t border-slate-200 dark:border-slate-800 p-3 space-y-3">
             {!isCollapsed && (
-              <div className="px-3 py-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
+              <div className="px-3 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-semibold text-sm">
@@ -181,7 +181,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                       {user?.name}
                     </p>
                     <p className="text-xs text-violet-600 dark:text-violet-400 capitalize">
@@ -202,7 +202,7 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
             )}
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 px-3 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+              className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
               title={isCollapsed ? 'Logout' : undefined}
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />

@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getOrdersByCustomerId, getAllOrders, type Event as ApiEvent, type Order } from '@/modules/shared-common/services/apiService';
-import { Button } from '@/components/ui/button';
+import { getEventById, getAllOrders, type Event as ApiEvent, type Order } from '@/modules/shared-common/services/apiService';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
 import { EventStatusSection } from '@/modules/event-management/components/EventStatusSection';
 import Link from 'next/link';
 import type { Event } from '@/lib/types';
@@ -15,7 +17,6 @@ import type { Event } from '@/lib/types';
 export default function EventDetailsPage() {
   const params = useParams();
   const eventId = params.id as string;
-  const [activeTab, setActiveTab] = useState<'overview' | 'tickets' | 'analytics'>('overview');
   const [event, setEvent] = useState<ApiEvent | null>(null);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -206,224 +207,192 @@ export default function EventDetailsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="flex border-b border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'overview'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full justify-start border-b border-slate-200 dark:border-slate-800 rounded-none bg-transparent p-0">
+          <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
             Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('tickets')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'tickets'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
+          </TabsTrigger>
+          <TabsTrigger value="tickets" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
             Ticket Types
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'analytics'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
             Analytics
-          </button>
-        </div>
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="p-6">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-                    Event Details
-                  </h3>
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-slate-600 dark:text-slate-400">Status:</dt>
-                      <dd className="text-slate-900 dark:text-white font-medium">
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-slate-600 dark:text-slate-400">Event Type:</dt>
-                      <dd className="text-slate-900 dark:text-white font-medium">
-                        {(event as any).eventType ? (
-                          (event as any).eventType === 'ONLINE' ? 'Online' :
-                          (event as any).eventType === 'IN_PERSON' ? 'In-Person' :
-                          (event as any).eventType === 'HYBRID' ? 'Hybrid' :
-                          (event as any).eventType
-                        ) : 'Not specified'}
-                      </dd>
-                    </div>
-                    {((event as any).eventType === 'ONLINE' || (event as any).eventType === 'HYBRID') && (event as any).onlineLink && (
-                      <div className="flex justify-between">
-                        <dt className="text-slate-600 dark:text-slate-400">Online Link:</dt>
-                        <dd className="text-slate-900 dark:text-white font-medium">
-                          <a href={(event as any).onlineLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            Join Online
-                          </a>
-                        </dd>
-                      </div>
-                    )}
-                    {((event as any).eventType === 'IN_PERSON' || (event as any).eventType === 'HYBRID') && event.location && (
-                      <div className="flex justify-between">
-                        <dt className="text-slate-600 dark:text-slate-400">Location:</dt>
-                        <dd className="text-slate-900 dark:text-white font-medium">
-                          {event.location}
-                        </dd>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <dt className="text-slate-600 dark:text-slate-400">Category:</dt>
-                      <dd className="text-slate-900 dark:text-white font-medium">
-                        {event.category}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-slate-600 dark:text-slate-400">Created:</dt>
-                      <dd className="text-slate-900 dark:text-white font-medium">
-                        {formatDate(event.createdAt)}
-                      </dd>
-                    </div>
-                  </dl>
+        <TabsContent value="overview" className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
+                Event Details
+              </h3>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-slate-600 dark:text-slate-400">Status:</dt>
+                  <dd className="text-slate-900 dark:text-white font-medium">
+                    {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                  </dd>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-                    Quick Actions
-                  </h3>
-                  <div className="space-y-2">
-                    <Link href={`/organizer/events/${event.id}/analytics`}>
-                      <Button variant="outline" className="w-full justify-start">
-                        📊 View Analytics
-                      </Button>
-                    </Link>
-                    <Link href={`/organizer/checkin?event=${event.id}`}>
-                      <Button variant="outline" className="w-full justify-start">
-                        ✓ Check-in Scanner
-                      </Button>
-                    </Link>
+                <div className="flex justify-between">
+                  <dt className="text-slate-600 dark:text-slate-400">Event Type:</dt>
+                  <dd className="text-slate-900 dark:text-white font-medium">
+                    {(event as any).eventType ? (
+                      (event as any).eventType === 'ONLINE' ? 'Online' :
+                      (event as any).eventType === 'IN_PERSON' ? 'In-Person' :
+                      (event as any).eventType === 'HYBRID' ? 'Hybrid' :
+                      (event as any).eventType
+                    ) : 'Not specified'}
+                  </dd>
+                </div>
+                {((event as any).eventType === 'ONLINE' || (event as any).eventType === 'HYBRID') && (event as any).onlineLink && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-600 dark:text-slate-400">Online Link:</dt>
+                    <dd className="text-slate-900 dark:text-white font-medium">
+                      <a href={(event as any).onlineLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        Join Online
+                      </a>
+                    </dd>
                   </div>
+                )}
+                {((event as any).eventType === 'IN_PERSON' || (event as any).eventType === 'HYBRID') && event.location && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-600 dark:text-slate-400">Location:</dt>
+                    <dd className="text-slate-900 dark:text-white font-medium">
+                      {event.location}
+                    </dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-slate-600 dark:text-slate-400">Category:</dt>
+                  <dd className="text-slate-900 dark:text-white font-medium">
+                    {event.category}
+                  </dd>
                 </div>
-              </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-600 dark:text-slate-400">Created:</dt>
+                  <dd className="text-slate-900 dark:text-white font-medium">
+                    {formatDate(event.createdAt)}
+                  </dd>
+                </div>
+              </dl>
             </div>
-          )}
-
-          {/* Tickets Tab */}
-          {activeTab === 'tickets' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-slate-900 dark:text-white">
-                  Ticket Types
-                </h3>
-                <Link href={`/organizer/events/${event.id}/tickets/new`}>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Add Ticket Type
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
+                Quick Actions
+              </h3>
+              <div className="space-y-2">
+                <Link href={`/organizer/events/${event.id}/analytics`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    📊 View Analytics
+                  </Button>
+                </Link>
+                <Link href={`/organizer/checkin?event=${event.id}`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    ✓ Check-in Scanner
                   </Button>
                 </Link>
               </div>
+            </div>
+          </div>
+        </TabsContent>
 
-              {event.ticketTypes.length === 0 ? (
-                <p className="text-slate-600 dark:text-slate-400 text-center py-8">
-                  No ticket types yet. Create one to start selling tickets.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Name
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Price
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Quantity
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Sold
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Available
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Revenue
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {event.ticketTypes.map((ticketType) => (
-                        <tr
-                          key={ticketType.id}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                        >
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white font-medium">
-                            {ticketType.name}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
-                            {formatCurrency(ticketType.price)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
-                            {ticketType.quantity}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
-                            {ticketType.sold}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
-                            {ticketType.quantity - ticketType.sold}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900 dark:text-white font-medium">
-                            {formatCurrency(ticketType.price * ticketType.sold)}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex gap-2">
-                              <Link
-                                href={`/organizer/events/${event.id}/tickets/${ticketType.id}/edit`}
-                              >
-                                <Button size="sm" variant="outline">
-                                  Edit
-                                </Button>
-                              </Link>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+        <TabsContent value="tickets" className="p-6 space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-slate-900 dark:text-white">
+              Ticket Types
+            </h3>
+            <Link href={`/organizer/events/${event.id}/tickets/new`}>
+              <Button variant="default">
+                Add Ticket Type
+              </Button>
+            </Link>
+          </div>
+
+          {event.ticketTypes.length === 0 ? (
+            <p className="text-slate-600 dark:text-slate-400 text-center py-8">
+              No ticket types yet. Create one to start selling tickets.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Sold
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Available
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Revenue
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                  {event.ticketTypes.map((ticketType) => (
+                    <tr
+                      key={ticketType.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white font-medium">
+                        {ticketType.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
+                        {formatCurrency(ticketType.price)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
+                        {ticketType.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
+                        {ticketType.sold}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
+                        {ticketType.quantity - ticketType.sold}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900 dark:text-white font-medium">
+                        {formatCurrency(ticketType.price * ticketType.sold)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/organizer/events/${event.id}/tickets/${ticketType.id}/edit`}
+                          >
+                            <Button size="sm" variant="outline">
+                              Edit
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+        </TabsContent>
 
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              <p className="text-slate-600 dark:text-slate-400">
-                Analytics dashboard coming soon. Visit the{' '}
-                <Link href={`/organizer/events/${event.id}/analytics`} className="text-blue-600 hover:underline">
-                  full analytics page
-                </Link>{' '}
-                for detailed insights.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+        <TabsContent value="analytics" className="p-6 space-y-6">
+          <p className="text-slate-600 dark:text-slate-400">
+            Analytics dashboard coming soon. Visit the{' '}
+            <Link href={`/organizer/events/${event.id}/analytics`} className="text-blue-600 hover:underline">
+              full analytics page
+            </Link>{' '}
+            for detailed insights.
+          </p>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

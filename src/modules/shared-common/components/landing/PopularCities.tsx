@@ -23,8 +23,8 @@
 
 import React from 'react';
 import { Globe } from 'lucide-react';
-import { Carousel } from '@/components/shared/Carousel';
-import { CityCard, City } from '@/components/shared/CityCard';
+import { Carousel } from '@/modules/shared-common/components/shared/Carousel';
+import { CityCard, City } from '@/modules/shared-common/components/shared/CityCard';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface PopularCitiesProps {

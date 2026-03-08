@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Alert, AlertDescription } from '@/modules/shared-common/components/ui/alert';
 import { AlertCircle, CheckCircle, Download, Loader } from 'lucide-react';
 
 interface DataExportButtonProps {
@@ -66,7 +66,7 @@ export const DataExportButton: React.FC<DataExportButtonProps> = ({
       </Button>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="error">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>

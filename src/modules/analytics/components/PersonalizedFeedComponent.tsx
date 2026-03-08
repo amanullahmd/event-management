@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import EventCard from '@/components/shared/EventCard';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import EventCard from '@/modules/shared-common/components/shared/EventCard';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface RecommendedEvent {

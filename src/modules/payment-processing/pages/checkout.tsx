@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Input } from '@/modules/shared-common/components/ui/input';
 import { useCart } from '@/modules/payment-processing/context/CartContext';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { getEventById, createOrder } from '@/modules/shared-common/services/apiService';

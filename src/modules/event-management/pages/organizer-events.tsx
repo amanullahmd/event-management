@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Card } from '@/modules/shared-common/components/ui/card';
 import { getAllEvents, type Event } from '@/modules/shared-common/services/apiService';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { StatusBadge } from '@/components/organizer/StatusBadge';
+import { StatusBadge } from '@/modules/event-management/components/organizer/StatusBadge';
 import { Calendar, MapPin, Users, Plus, Edit, BarChart3, Ticket, Eye } from 'lucide-react';
 
 export default function OrganizerEventsPage() {

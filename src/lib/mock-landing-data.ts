@@ -6,9 +6,9 @@
  * from the real backend API in the landing page component.
  */
 
-import { FeaturedCalendar } from '@/components/shared/FeaturedCalendarCard';
-import { City } from '@/components/shared/CityCard';
-import { Testimonial } from '@/components/shared/TestimonialCard';
+import { FeaturedCalendar } from '@/modules/shared-common/components/shared/FeaturedCalendarCard';
+import { City } from '@/modules/shared-common/components/shared/CityCard';
+import { Testimonial } from '@/modules/shared-common/components/shared/TestimonialCard';
 
 /**
  * Featured calendars for the FeaturedCalendars section

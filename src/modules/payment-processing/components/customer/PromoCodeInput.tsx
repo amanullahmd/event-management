@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Label } from '@/modules/shared-common/components/ui/label';
+import { Alert, AlertDescription } from '@/modules/shared-common/components/ui/alert';
 import { AlertCircle, CheckCircle, Loader } from 'lucide-react';
 
 interface PromoCodeInputProps {
@@ -104,7 +104,7 @@ export const PromoCodeInput: React.FC<PromoCodeInputProps> = ({
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="error">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>

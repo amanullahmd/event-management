@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { LogOut, User, LayoutDashboard, Ticket, Calendar, ChevronDown, Search, Menu, X, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { ThemeToggle } from '@/modules/shared-common/components/ui/theme-toggle';
 
 export function Header() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -115,6 +116,9 @@ export function Header() {
                 <Search className="w-5 h-5" />
               </Button>
             </Link>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {isAuthenticated ? (
               <>

@@ -7,9 +7,9 @@ import type {
   CreateVerificationApplicationRequest,
   PerformanceMetrics,
 } from '@/lib/types/organizer-trust-profiles';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 
 interface VerificationApplicationComponentProps {
   organizerId: string;
@@ -146,7 +146,7 @@ export const VerificationApplicationComponent: React.FC<VerificationApplicationC
           <Badge className="mb-3">Pending Review</Badge>
           <h3 className="text-lg font-semibold text-blue-800 mb-2">Application Under Review</h3>
           <p className="text-blue-700">
-            Your verification application is being reviewed by our team. You'll receive an email
+            Your verification application is being reviewed by our team. You&apos;ll receive an email
             notification once a decision has been made.
           </p>
           {application?.submissionDate && (

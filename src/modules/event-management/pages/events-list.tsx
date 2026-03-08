@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { EventsPageClient } from '@/components/public/EventsPageClient';
+import { EventsPageClient } from '@/modules/shared-common/components/public/EventsPageClient';
 import { getAllEvents, type Event } from '@/modules/shared-common/services/apiService';
 
 /**

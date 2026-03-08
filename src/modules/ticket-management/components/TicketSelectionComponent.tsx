@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AvailabilityStatusDisplay } from '../../../components/organizer/AvailabilityStatusDisplay';
+import { AvailabilityStatusDisplay } from '@/modules/event-management/components/organizer/AvailabilityStatusDisplay';
 import { TicketTypeWithPricing } from '@/modules/ticket-management/types/pricing';
 
 interface TicketSelectionComponentProps {

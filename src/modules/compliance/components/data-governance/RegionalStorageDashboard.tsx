@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/modules/shared-common/components/ui/card';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/modules/shared-common/components/ui/table';
 import { Globe, Server } from 'lucide-react';
 import type { RegionalStorageSummary } from '@/lib/types/data-residency';
 
@@ -18,7 +18,7 @@ export const RegionalStorageDashboard: React.FC<RegionalStorageDashboardProps> =
   const fetchSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${apiBaseUrl}/api/data-governance/regional-summary`, {
+      const response = await fetch(`${apiBaseUrl}/data-governance/regional-summary`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });

@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { apiPost } from '@/modules/shared-common/utils/api';
 import type { CreateReviewRequest } from '@/lib/types/organizer-trust-profiles';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/modules/shared-common/components/ui/card';
+import { Button } from '@/modules/shared-common/components/ui/button';
+import { Input } from '@/modules/shared-common/components/ui/input';
+import { Badge } from '@/modules/shared-common/components/ui/badge';
 
 interface ReviewSubmissionComponentProps {
   organizerId: string;

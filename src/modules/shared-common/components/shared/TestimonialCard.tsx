@@ -76,7 +76,7 @@ export function TestimonialCard({
 
       {/* Quote text - Validates: Requirements 11.3 */}
       <p className="text-slate-700 dark:text-slate-300 mb-4 italic">
-        "{testimonial.quote}"
+        &ldquo;{testimonial.quote}&rdquo;
       </p>
 
       {/* Author and source - Validates: Requirements 11.3 */}
