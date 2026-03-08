@@ -35,7 +35,7 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
     return initialEvents.filter((event) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesSearch = event.name.toLowerCase().includes(query) || event.description.toLowerCase().includes(query) || event.category.toLowerCase().includes(query) || event.location.toLowerCase().includes(query);
+        const matchesSearch = (event.name ?? '').toLowerCase().includes(query) || (event.description ?? '').toLowerCase().includes(query) || (event.category ?? '').toLowerCase().includes(query) || (event.location ?? '').toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
       if (selectedCategory !== 'All' && event.category !== selectedCategory) return false;

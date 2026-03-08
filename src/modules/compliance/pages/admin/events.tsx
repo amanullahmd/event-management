@@ -69,9 +69,9 @@ export default function EventManagementPage() {
   const filteredEvents = useMemo(() => {
     return events.filter(
       (event) =>
-        event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (event.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.location ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.category ?? '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [events, searchTerm]);
 
