@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { DateTimePicker } from './DateTimePicker';
 import { TimezoneSelector } from './TimezoneSelector';
 import { EventTypeSelector, type EventType } from './EventTypeSelector';
+import { CategorySelector } from './CategorySelector';
+import { ImageUploadArea } from './ImageUploadArea';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 interface CreateEventRequest {
   title: string;
@@ -18,6 +21,7 @@ interface CreateEventRequest {
   capacity?: number;
   tags?: string[];
   notes?: string;
+  categoryId?: string;
 }
 
 interface ValidationErrors {
@@ -29,7 +33,7 @@ interface EventCreationFormProps {
   onError?: (error: string) => void;
 }
 
-const EVENT_TYPES = ['conference', 'workshop', 'meetup', 'webinar', 'seminar', 'training'];
+const EVENT_TYPES = ['ONLINE', 'IN_PERSON', 'HYBRID'];
 
 export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess, onError }) => {
   const router = useRouter();
@@ -45,12 +49,15 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
     capacity: undefined,
     tags: [],
     notes: '',
+    categoryId: undefined,
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [tagInput, setTagInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const { uploadImage, isUploading, error: imageUploadError } = useImageUpload();
 
   // Validation functions
   const validateTitle = (title: string): string | null => {
@@ -302,6 +309,22 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
       }
 
       const data = await response.json();
+      
+      // Upload image if one was selected
+      if (selectedImage) {
+        try {
+          await uploadImage(data.id, selectedImage);
+        } catch {
+          // Event was created but image upload failed — show error and allow retry
+          setErrors({ imageUpload: 'Event created, but image upload failed. You can upload the image from the event edit page.' });
+          if (onSuccess) {
+            onSuccess(data.id);
+          }
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       setSuccessMessage('Event created successfully as draft!');
       
       if (onSuccess) {
@@ -394,6 +417,20 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
           />
           {errors.eventType && <p className="mt-2 text-sm text-red-600">{errors.eventType}</p>}
         </div>
+
+        {/* Category */}
+        <CategorySelector
+          value={formData.categoryId}
+          onChange={(categoryId) => setFormData(prev => ({ ...prev, categoryId: categoryId || undefined }))}
+        />
+
+        {/* Event Image */}
+        <ImageUploadArea
+          onImageSelected={(file) => setSelectedImage(file)}
+          onImageRemoved={() => setSelectedImage(null)}
+          isUploading={isUploading}
+          error={errors.imageUpload || imageUploadError || undefined}
+        />
 
         {/* Online Link - Show for ONLINE and HYBRID */}
         {(formData.eventType === 'ONLINE' || formData.eventType === 'HYBRID') && (

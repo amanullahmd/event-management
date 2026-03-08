@@ -6,6 +6,9 @@ import { updateEvent } from '@/modules/shared-common/utils/api';
 import type { UpdateEventRequest, EventResponse, ApiErrorResponse } from '@/modules/event-management/types/event-update';
 import { isConflictError, isValidationError, isAuthorizationError, isNotFoundError } from '@/modules/event-management/types/event-update';
 import { EventTypeSelector, type EventType } from './EventTypeSelector';
+import { CategorySelector } from './CategorySelector';
+import { ImageUploadArea } from './ImageUploadArea';
+import { useImageUpload } from '../hooks/useImageUpload';
 
 interface ValidationErrors {
   [key: string]: string;
@@ -39,6 +42,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
     tags: initialEvent.tags || [],
     notes: initialEvent.notes,
     updatedAt: initialEvent.updatedAt,
+    categoryId: initialEvent.categoryId || undefined,
   });
 
   const [originalEvent] = useState<EventResponse>(initialEvent);
@@ -49,6 +53,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
   const [conflictError, setConflictError] = useState<any>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(initialEvent.imageUrl);
+  const { uploadImage, deleteImage, isUploading, error: imageUploadError } = useImageUpload();
 
   // Validation functions
   const validateTitle = (title: string): string | null => {
@@ -351,6 +358,24 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
 
       const updatedEvent = await updateEvent(eventId, updateData);
       
+      // Handle image upload or removal
+      if (selectedImage) {
+        try {
+          const imageResponse = await uploadImage(eventId, selectedImage);
+          setCurrentImageUrl(imageResponse?.url);
+          setSelectedImage(null);
+        } catch {
+          setErrors(prev => ({ ...prev, imageUpload: 'Event updated, but image upload failed. Please try again.' }));
+        }
+      } else if (currentImageUrl === undefined && initialEvent.imageUrl) {
+        // Image was removed
+        try {
+          await deleteImage(eventId);
+        } catch {
+          // Non-critical, continue
+        }
+      }
+
       setSuccessMessage('Event updated successfully!');
       setFormData(updatedEvent);
       setChangedFields(new Set());
@@ -518,6 +543,40 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
           />
           {errors.eventType && <p className="mt-2 text-sm text-red-600">{errors.eventType}</p>}
         </div>
+
+        {/* Category */}
+        <CategorySelector
+          value={formData.categoryId || undefined}
+          onChange={(categoryId) => {
+            const newChangedFields = new Set(changedFields);
+            if (categoryId !== (initialEvent.categoryId || null)) {
+              newChangedFields.add('categoryId');
+            } else {
+              newChangedFields.delete('categoryId');
+            }
+            setChangedFields(newChangedFields);
+            setIsDirty(newChangedFields.size > 0);
+            setFormData(prev => ({ ...prev, categoryId: categoryId }));
+          }}
+        />
+
+        {/* Event Image */}
+        <ImageUploadArea
+          onImageSelected={(file) => {
+            setSelectedImage(file);
+            setChangedFields(prev => new Set(prev).add('image'));
+            setIsDirty(true);
+          }}
+          onImageRemoved={() => {
+            setSelectedImage(null);
+            setCurrentImageUrl(undefined);
+            setChangedFields(prev => new Set(prev).add('image'));
+            setIsDirty(true);
+          }}
+          currentImageUrl={currentImageUrl}
+          isUploading={isUploading}
+          error={errors.imageUpload || imageUploadError || undefined}
+        />
 
         {/* Online Link - Show for ONLINE and HYBRID */}
         {(formData.eventType === 'ONLINE' || formData.eventType === 'HYBRID') && (

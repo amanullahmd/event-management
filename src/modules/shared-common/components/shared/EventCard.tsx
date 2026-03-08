@@ -321,6 +321,13 @@ export function EventCard({
             {event.name}
           </h3>
           
+          {/* Category name - Validates: Requirements 6.5 */}
+          {event.category && (
+            <span className="inline-block text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full mb-2" data-testid="event-card-category">
+              {event.category}
+            </span>
+          )}
+          
           {/* Date/Time - Validates: Requirements 5.4 */}
           <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 mb-1">
             <Calendar className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
@@ -424,6 +431,13 @@ export function EventCard({
         <h3 className="font-semibold text-slate-900 dark:text-slate-50 line-clamp-2 mb-2">
           {event.name}
         </h3>
+        
+        {/* Category name - Validates: Requirements 6.5 */}
+        {event.category && (
+          <span className="inline-block text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full mb-2" data-testid="event-card-category">
+            {event.category}
+          </span>
+        )}
         
         {/* Date/Time - Validates: Requirements 5.4 */}
         <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 mb-1">

@@ -76,9 +76,9 @@ export function Header() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 font-bold text-xl">
               <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                E
+                P
               </div>
-              <span className="text-gray-900 dark:text-white">EventHub</span>
+              <span className="text-gray-900 dark:text-white">PulsarFlow</span>
             </Link>
 
             {/* Desktop Navigation */}

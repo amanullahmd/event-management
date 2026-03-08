@@ -1,8 +1,34 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
-import EventCreationForm from '../EventCreationForm';
+import EventCreationForm from '../components/EventCreationForm';
+import { useImageUpload } from '../hooks/useImageUpload';
+
+// Mock useImageUpload hook
+jest.mock('../hooks/useImageUpload', () => ({
+  useImageUpload: jest.fn(),
+}));
+
+// Mock DateTimePicker to immediately provide valid future dates
+jest.mock('../components/DateTimePicker', () => {
+  const React = require('react');
+  return {
+    DateTimePicker: ({ onDateTimeChange }: { onDateTimeChange: (start: Date, end: Date, tz: string) => void }) => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(10, 0, 0, 0);
+      const dayAfter = new Date();
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      dayAfter.setHours(11, 0, 0, 0);
+      React.useEffect(() => {
+        onDateTimeChange(tomorrow, dayAfter, 'UTC');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return React.createElement('div', { 'data-testid': 'date-time-picker' }, 'DateTimePicker');
+    },
+  };
+});
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -15,12 +41,21 @@ global.fetch = jest.fn();
 describe('EventCreationForm', () => {
   const mockPush = jest.fn();
   const mockBack = jest.fn();
+  const mockUploadImage = jest.fn();
+  const mockDeleteImage = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
       back: mockBack,
+    });
+    (useImageUpload as jest.Mock).mockReturnValue({
+      uploadImage: mockUploadImage,
+      deleteImage: mockDeleteImage,
+      isUploading: false,
+      error: null,
+      imageUrl: null,
     });
     localStorage.setItem('token', 'test-token');
   });
@@ -506,6 +541,189 @@ describe('EventCreationForm', () => {
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith('Server error');
       });
+    });
+  });
+
+  describe('Image Upload Integration', () => {
+    beforeEach(() => {
+      // Mock URL.createObjectURL for jsdom
+      global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+      global.URL.revokeObjectURL = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    /**
+     * Helper to fill in the required date/time fields via DateTimePicker inputs.
+     * Sets a future date and valid start/end times.
+     */
+    const fillDateTimeFields = () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().slice(0, 10); // YYYY-MM-DD
+
+      const dateInputEl = document.querySelector('input[type="date"]') as HTMLInputElement;
+      if (dateInputEl) {
+        fireEvent.change(dateInputEl, { target: { value: dateStr } });
+      }
+
+      // Select valid start/end times via aria-label
+      const startTimeSelect = document.querySelector('select[aria-label="Start time"]') as HTMLSelectElement;
+      const endTimeSelect = document.querySelector('select[aria-label="End time"]') as HTMLSelectElement;
+      if (startTimeSelect) fireEvent.change(startTimeSelect, { target: { value: '10:00' } });
+      if (endTimeSelect) fireEvent.change(endTimeSelect, { target: { value: '11:00' } });
+    };
+
+    // Req 6.1: Display image upload area
+    it('should render the ImageUploadArea component', () => {
+      render(<EventCreationForm />);
+      expect(screen.getByLabelText(/Upload event image/i)).toBeInTheDocument();
+    });
+
+    // Req 6.1: Display accepted file types and size limit
+    it('should display accepted file types and size limit in the upload area', () => {
+      render(<EventCreationForm />);
+      expect(screen.getByText(/JPG, PNG, WebP, GIF/i)).toBeInTheDocument();
+      expect(screen.getByText(/5 MB/i)).toBeInTheDocument();
+    });
+
+    // Req 6.2: Display preview of selected image
+    it('should display image preview after file is selected', async () => {
+      render(<EventCreationForm />);
+
+      const file = new File(['image-content'], 'event.jpg', { type: 'image/jpeg' });
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+      Object.defineProperty(input, 'files', { value: [file], configurable: true });
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByAltText(/Event image preview/i)).toBeInTheDocument();
+      });
+    });
+
+    // Req 6.6: Upload image after event creation using returned event ID
+    it('should call uploadImage with the returned event ID after successful event creation', async () => {
+      mockUploadImage.mockResolvedValueOnce({ url: 'https://example.com/image.jpg' });
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'new-event-456' }),
+      });
+
+      render(<EventCreationForm />);
+
+      // Select an image file first
+      const file = new File(['image-content'], 'event.jpg', { type: 'image/jpeg' });
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      Object.defineProperty(input, 'files', { value: [file], configurable: true });
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByAltText(/Event image preview/i)).toBeInTheDocument();
+      });
+
+      // Fill in required form fields
+      await userEvent.type(screen.getByLabelText(/Event Title/i), 'Test Event');
+      await userEvent.type(screen.getByLabelText(/Description/i), 'This is a test event description');
+      await userEvent.type(screen.getByPlaceholderText(/https:\/\/zoom/i), 'https://zoom.us/j/123');
+
+      // Flush microtasks to allow DateTimePicker mock to call onDateTimeChange
+      await act(async () => { await Promise.resolve(); });
+
+      // Submit the form directly (bypassing disabled check)
+      const form = document.querySelector('form') as HTMLFormElement;
+      fireEvent.submit(form);
+
+      await waitFor(() => {
+        expect(mockUploadImage).toHaveBeenCalledWith('new-event-456', file);
+      });
+    });
+
+    // Req 6.6: No image upload when no image selected
+    it('should not call uploadImage when no image is selected', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'event-789' }),
+      });
+
+      render(<EventCreationForm />);
+
+      await userEvent.type(screen.getByLabelText(/Event Title/i), 'Test Event');
+      await userEvent.type(screen.getByLabelText(/Description/i), 'This is a test event description');
+      await userEvent.type(screen.getByPlaceholderText(/https:\/\/zoom/i), 'https://zoom.us/j/123');
+
+      // Flush microtasks to allow DateTimePicker mock to call onDateTimeChange
+      await act(async () => { await Promise.resolve(); });
+
+      // Submit the form directly
+      const form = document.querySelector('form') as HTMLFormElement;
+      fireEvent.submit(form);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Event created successfully/i)).toBeInTheDocument();
+      });
+
+      expect(mockUploadImage).not.toHaveBeenCalled();
+    });
+
+    // Req 6.8: Handle upload errors gracefully with retry capability
+    it('should display error message and still call onSuccess when image upload fails after event creation', async () => {
+      mockUploadImage.mockRejectedValueOnce(new Error('Upload failed'));
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'event-retry-test' }),
+      });
+
+      const onSuccess = jest.fn();
+      render(<EventCreationForm onSuccess={onSuccess} />);
+
+      // Select an image file
+      const file = new File(['image-content'], 'event.jpg', { type: 'image/jpeg' });
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      Object.defineProperty(input, 'files', { value: [file], configurable: true });
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByAltText(/Event image preview/i)).toBeInTheDocument();
+      });
+
+      await userEvent.type(screen.getByLabelText(/Event Title/i), 'Test Event');
+      await userEvent.type(screen.getByLabelText(/Description/i), 'This is a test event description');
+      await userEvent.type(screen.getByPlaceholderText(/https:\/\/zoom/i), 'https://zoom.us/j/123');
+
+      // Flush microtasks to allow DateTimePicker mock to call onDateTimeChange
+      await act(async () => { await Promise.resolve(); });
+
+      // Submit the form directly
+      const form = document.querySelector('form') as HTMLFormElement;
+      fireEvent.submit(form);
+
+      // Event was created — onSuccess is still called even when image upload fails
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledWith('event-retry-test');
+      });
+
+      // Error message is shown directing user to retry via edit page
+      await waitFor(() => {
+        expect(screen.getByText(/image upload failed/i)).toBeInTheDocument();
+      });
+    });
+
+    // Req 6.7: Show loading state during upload
+    it('should show uploading state in ImageUploadArea when isUploading is true', () => {
+      (useImageUpload as jest.Mock).mockReturnValue({
+        uploadImage: mockUploadImage,
+        deleteImage: mockDeleteImage,
+        isUploading: true,
+        error: null,
+        imageUrl: null,
+      });
+
+      render(<EventCreationForm />);
+
+      expect(screen.getByRole('status', { name: /Uploading image/i })).toBeInTheDocument();
     });
   });
 });

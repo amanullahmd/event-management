@@ -120,10 +120,10 @@ export function HeroSection({ onSearch, className }: HeroSectionProps) {
                 'animate-slide-up'
               )}
             >
-              Delightful Events
+              Your Next Experience
               <br />
               <span className="bg-gradient-to-r from-pink-200 to-blue-200 bg-clip-text text-transparent">
-                Start Here
+                Starts on PulsarFlow
               </span>
             </h1>
 
@@ -134,8 +134,7 @@ export function HeroSection({ onSearch, className }: HeroSectionProps) {
                 'animate-slide-up animation-delay-200'
               )}
             >
-              Discover amazing events happening near you. From concerts to conferences,
-              find your next unforgettable experience.
+              Discover concerts, conferences, workshops and more — or create your own event in minutes.
             </p>
           </div>
 
@@ -207,7 +206,7 @@ export function HeroSection({ onSearch, className }: HeroSectionProps) {
       </div>
 
       {/* Gradient overlay at bottom for smooth transition */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-slate-900 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-slate-950 to-transparent" />
 
       {/* Animation styles */}
       <style jsx>{`

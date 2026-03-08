@@ -1,4 +1,4 @@
-# EventHub - Modern Event Management & Ticketing Platform
+# PulsarFlow - Modern Event Management & Ticketing Platform
 
 A professional, feature-rich event management and ticketing system built with Next.js, React, and TypeScript. Manage events, sell tickets, and track analytics with ease.
 
@@ -267,7 +267,7 @@ Contributions are welcome! Please follow these steps:
 
 ## 📞 Support
 
-For support, email support@eventhub.com or open an issue on GitHub.
+For support, email support@pulsarflow.com or open an issue on GitHub.
 
 ## 🎯 Roadmap
 
@@ -282,4 +282,4 @@ For support, email support@eventhub.com or open an issue on GitHub.
 
 ---
 
-**EventHub** - Making event management simple, powerful, and accessible to everyone.
+**PulsarFlow** - Making event management simple, powerful, and accessible to everyone.

@@ -4,6 +4,9 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
+// Add a timeout to prevent hanging requests
+const DEFAULT_TIMEOUT = 10000; // 10 seconds
+
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
 }
@@ -113,6 +116,7 @@ export async function apiRequest<T>(
     let response = await fetch(url, {
       ...options,
       headers,
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT),
     });
 
     // Handle 401 Unauthorized - try to refresh token and retry
@@ -148,6 +152,12 @@ export async function apiRequest<T>(
 
     return await response.json();
   } catch (error) {
+    // Handle network errors specifically
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('Network error - cannot reach API server:', endpoint);
+      throw new Error('Network error - Unable to connect to the server. Please check your internet connection.');
+    }
+    
     console.error(`API request failed: ${endpoint}`, error);
     throw error;
   }

@@ -122,6 +122,18 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
               <Link key={event.id} href={`/events/${event.id}`} className="group block">
                 <Card className="overflow-hidden bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:shadow-lg transition-all hover:-translate-y-1 h-full">
                   <div className="h-44 bg-gradient-to-br from-violet-500 to-fuchsia-500 relative">
+                    {event.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={event.image}
+                        alt={event.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" aria-label="Event image placeholder">
+                        <Calendar className="w-12 h-12 text-white/50" />
+                      </div>
+                    )}
                     <button onClick={(e) => { e.preventDefault(); toggleLike(event.id); }} className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${likedEvents.has(event.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:bg-white'}`}><Heart className={`w-4 h-4 ${likedEvents.has(event.id) ? 'fill-current' : ''}`} /></button>
                     <div className="absolute bottom-3 left-3"><div className="bg-white dark:bg-slate-900 rounded-lg px-3 py-1.5 shadow-lg"><p className="text-xs font-semibold text-violet-600 dark:text-violet-400">{formatDate(event.date)}</p></div></div>
                   </div>
@@ -140,7 +152,14 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
             {paginatedEvents.map((event) => (
               <Link key={event.id} href={`/events/${event.id}`} className="group block">
                 <div className="flex gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-600 hover:shadow-md transition-all">
-                  <div className="flex-shrink-0 w-16 text-center"><div className="bg-violet-100 dark:bg-violet-900/30 rounded-xl p-2"><p className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase">{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</p><p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{new Date(event.date).getDate()}</p></div></div>
+                  <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                    {event.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Calendar className="w-7 h-7 text-white/70" aria-label="Event image placeholder" />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0"><span className="text-xs font-medium text-violet-600 dark:text-violet-400">{event.category}</span><h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors truncate">{event.name}</h3><div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400"><span className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{formatTime(event.date)}</span><span className="flex items-center truncate"><MapPin className="w-4 h-4 mr-1 flex-shrink-0" />{event.location.split(',')[0]}</span></div></div>

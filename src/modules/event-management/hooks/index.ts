@@ -3,4 +3,4 @@
  */
 
 // Exports from this directory
-export {};
+export { useImageUpload } from './useImageUpload';

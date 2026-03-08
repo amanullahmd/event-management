@@ -262,7 +262,7 @@ describe('Landing Page - Navigation', () => {
 describe('Landing Page - Footer', () => {
   test('footer has company information', () => {
     const footer = {
-      companyName: 'EventHub',
+      companyName: 'PulsarFlow',
       description: 'The all-in-one event management platform.',
     };
 
@@ -293,10 +293,10 @@ describe('Landing Page - Footer', () => {
 
   test('footer has copyright information', () => {
     const currentYear = new Date().getFullYear();
-    const copyright = `© ${currentYear} EventHub. All rights reserved.`;
+    const copyright = `© ${currentYear} PulsarFlow. All rights reserved.`;
 
     expect(copyright).toContain(currentYear.toString());
-    expect(copyright).toContain('EventHub');
+    expect(copyright).toContain('PulsarFlow');
   });
 });
 

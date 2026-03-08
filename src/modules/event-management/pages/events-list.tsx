@@ -10,7 +10,10 @@ export default async function EventsPage() {
   let allEvents: Event[] = [];
   
   try {
-    allEvents = (await getAllEvents()).filter((e) => e.status === 'active');
+    const fetched = await getAllEvents();
+    allEvents = (Array.isArray(fetched) ? fetched : []).filter(
+      (e) => e.status === 'active' || e.status === 'published'
+    );
   } catch (error) {
     console.error('Failed to fetch events during build:', error);
     // Return empty array during build time if backend is not available

@@ -19,6 +19,7 @@ export interface UpdateEventRequest {
   tags?: string[];
   notes?: string;
   updatedAt?: string | Date;
+  categoryId?: string | null;
 }
 
 /**
@@ -39,6 +40,10 @@ export interface EventResponse {
   tags: string[];
   notes?: string;
   status: 'draft' | 'published';
+  imageUrl?: string;
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
   createdAt: string | Date;
   updatedAt: string | Date;
 }

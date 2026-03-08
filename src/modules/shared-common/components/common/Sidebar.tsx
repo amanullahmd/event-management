@@ -12,6 +12,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { PulsarFlowLogo } from './PulsarFlowLogo';
 
 interface SidebarLink {
   label: string;
@@ -81,23 +82,16 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
           <div className="p-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between">
               {!isCollapsed && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">E</span>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                      {title}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {user?.role === 'ADMIN' ? 'Admin Panel' : user?.role === 'ORGANIZER' ? 'Organizer Portal' : 'My Account'}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <PulsarFlowLogo size="md" variant="full" />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 ml-1">
+                    {user?.role === 'ADMIN' ? 'Admin' : user?.role === 'ORGANIZER' ? 'Organizer' : 'Account'}
+                  </p>
                 </div>
               )}
               {isCollapsed && (
-                <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center mx-auto">
-                  <span className="text-white font-bold text-lg">E</span>
+                <div className="mx-auto">
+                  <PulsarFlowLogo size="md" variant="icon" />
                 </div>
               )}
               <div className="flex items-center gap-2">

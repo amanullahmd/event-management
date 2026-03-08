@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '@/modules/shared-common/components/ui/theme-toggle';
 import { Bell, Search } from 'lucide-react';
 import { cn } from '@/modules/shared-common/utils/cn';
+import { useAuth } from '@/modules/authentication/context/AuthContext';
 
 export interface DashboardLayoutProps {
   /** Sidebar navigation links */
@@ -33,6 +34,9 @@ export function DashboardLayout({
   pageTitle,
   className,
 }: DashboardLayoutProps) {
+  const { user } = useAuth();
+  const avatarInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+
   return (
     <div className={cn('flex h-screen bg-white dark:bg-slate-950', className)}>
       {/* Sidebar */}
@@ -49,7 +53,7 @@ export function DashboardLayout({
               <input
                 type="text"
                 placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -66,7 +70,7 @@ export function DashboardLayout({
 
             {/* User menu - placeholder */}
             <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              U
+              {avatarInitial}
             </div>
           </div>
         </header>

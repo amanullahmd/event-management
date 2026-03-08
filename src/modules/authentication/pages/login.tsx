@@ -61,12 +61,12 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl font-bold">E</span>
+              <span className="text-white text-2xl font-bold">P</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome Back
             </h1>
-            <p className="text-gray-600 dark:text-gray-300">Sign in to your EventHub account</p>
+            <p className="text-gray-600 dark:text-gray-300">Sign in to your PulsarFlow account</p>
           </div>
 
           {/* Error Message */}

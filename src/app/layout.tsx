@@ -16,8 +16,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Event Management & Ticketing System",
-  description: "A comprehensive event management and ticketing platform",
+  title: {
+    default: 'PulsarFlow — Discover & Create Unforgettable Events',
+    template: '%s | PulsarFlow',
+  },
+  description:
+    'PulsarFlow is the modern event management and ticketing platform. Discover concerts, conferences, workshops and more — or create your own event in minutes.',
+  keywords: [
+    'events',
+    'ticketing',
+    'event management',
+    'concerts',
+    'conferences',
+    'workshops',
+    'PulsarFlow',
+  ],
+  openGraph: {
+    title: 'PulsarFlow — Discover & Create Unforgettable Events',
+    description:
+      'The modern event management and ticketing platform. Find your next experience or host your own.',
+    siteName: 'PulsarFlow',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PulsarFlow — Discover & Create Unforgettable Events',
+    description:
+      'The modern event management and ticketing platform. Find your next experience or host your own.',
+  },
+  robots: { index: true, follow: true },
 };
 
 const themeScript = `

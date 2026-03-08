@@ -3,4 +3,4 @@
  */
 
 // Exports from this directory
-export {};
+export * from './image-upload';

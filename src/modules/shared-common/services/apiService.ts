@@ -80,19 +80,19 @@ export interface Ticket {
 
 // Users API
 export async function getAllUsers(): Promise<User[]> {
-  return apiRequest('/api/admin/users');
+  return apiRequest('/admin/users');
 }
 
 export async function getUserById(id: string): Promise<User | undefined> {
-  return apiRequest(`/api/admin/users/${id}`);
+  return apiRequest(`/admin/users/${id}`);
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
-  return apiRequest(`/api/admin/users/email/${encodeURIComponent(email)}`);
+  return apiRequest(`/admin/users/email/${encodeURIComponent(email)}`);
 }
 
 export async function updateUserRole(userId: string, role: string): Promise<User> {
-  return apiRequest('/api/admin/users/role', {
+  return apiRequest('/admin/users/role', {
     method: 'PUT',
     body: JSON.stringify({ userId, role }),
   });
@@ -100,45 +100,49 @@ export async function updateUserRole(userId: string, role: string): Promise<User
 
 // Events API
 export async function getAllEvents(): Promise<Event[]> {
-  return apiRequest('/api/events');
+  const data = await apiRequest('/events');
+  // Backend returns a Spring Page object { content: [...], ... }, not a plain array
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
 }
 
 export async function getEventById(id: string): Promise<Event | undefined> {
-  return apiRequest(`/api/events/${id}`);
+  return apiRequest(`/events/${id}`);
 }
 
 export async function getEventsByOrganizerId(organizerId: string): Promise<Event[]> {
-  return apiRequest(`/api/admin/organizers/${organizerId}/events`);
+  return apiRequest(`/admin/organizers/${organizerId}/events`);
 }
 
 // Orders API
 export async function getAllOrders(): Promise<Order[]> {
-  return apiRequest('/api/admin/orders');
+  return apiRequest('/admin/orders');
 }
 
 export async function getOrderById(id: string): Promise<Order | undefined> {
-  return apiRequest(`/api/orders/${id}`);
+  return apiRequest(`/orders/${id}`);
 }
 
 export async function getOrdersByCustomerId(customerId: string): Promise<Order[]> {
-  return apiRequest(`/api/orders/customer/${customerId}`);
+  return apiRequest(`/orders/customer/${customerId}`);
 }
 
 // Tickets API
 export async function getAllTickets(): Promise<Ticket[]> {
-  return apiRequest('/api/tickets');
+  return apiRequest('/tickets');
 }
 
 export async function getTicketsByOrderId(orderId: string): Promise<Ticket[]> {
-  return apiRequest(`/api/tickets/order/${orderId}`);
+  return apiRequest(`/tickets/order/${orderId}`);
 }
 
 export async function getTicketsByCustomerId(customerId: string): Promise<Ticket[]> {
-  return apiRequest(`/api/tickets/customer/${customerId}`);
+  return apiRequest(`/tickets/customer/${customerId}`);
 }
 
 export async function getTicketsByEventId(eventId: string): Promise<Ticket[]> {
-  return apiRequest(`/api/tickets/event/${eventId}`);
+  return apiRequest(`/tickets/event/${eventId}`);
 }
 
 // Dashboard Metrics
@@ -147,19 +151,19 @@ export async function getDashboardMetrics(startDate?: string, endDate?: string):
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
   
-  return apiRequest(`/api/admin/dashboard/metrics?${params.toString()}`);
+  return apiRequest(`/admin/dashboard/metrics?${params.toString()}`);
 }
 
 // Create operations
 export async function createOrder(order: Omit<Order, 'id'>): Promise<Order> {
-  return apiRequest('/api/orders', {
+  return apiRequest('/orders', {
     method: 'POST',
     body: JSON.stringify(order),
   });
 }
 
 export async function createEvent(event: Omit<Event, 'id'>): Promise<Event> {
-  return apiRequest('/api/events', {
+  return apiRequest('/events', {
     method: 'POST',
     body: JSON.stringify(event),
   });
@@ -185,15 +189,15 @@ export async function getDashboardData() {
 
 // Refunds API
 export async function getAllRefunds(): Promise<RefundRequest[]> {
-  return apiRequest('/api/admin/refunds');
+  return apiRequest('/admin/refunds');
 }
 
 export async function getRefundsByEventId(eventId: string): Promise<RefundRequest[]> {
-  return apiRequest(`/api/admin/refunds/event/${eventId}`);
+  return apiRequest(`/admin/refunds/event/${eventId}`);
 }
 
 export async function updateRefundStatus(refundId: string, status: string): Promise<RefundRequest> {
-  return apiRequest(`/api/admin/refunds/${refundId}/status`, {
+  return apiRequest(`/admin/refunds/${refundId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
   });
@@ -201,15 +205,15 @@ export async function updateRefundStatus(refundId: string, status: string): Prom
 
 // Organizers API
 export async function getAllOrganizers(): Promise<User[]> {
-  return apiRequest('/api/admin/organizers');
+  return apiRequest('/admin/organizers');
 }
 
 export async function getOrganizerById(id: string): Promise<User | undefined> {
-  return apiRequest(`/api/admin/organizers/${id}`);
+  return apiRequest(`/admin/organizers/${id}`);
 }
 
 export async function updateOrganizerVerificationStatus(organizerId: string, status: string): Promise<User> {
-  return apiRequest(`/api/admin/organizers/${organizerId}/verification`, {
+  return apiRequest(`/admin/organizers/${organizerId}/verification`, {
     method: 'PUT',
     body: JSON.stringify({ verificationStatus: status }),
   });
@@ -217,26 +221,26 @@ export async function updateOrganizerVerificationStatus(organizerId: string, sta
 
 // Users API
 export async function updateUserStatus(userId: string, status: string): Promise<User> {
-  return apiRequest(`/api/admin/users/${userId}/status`, {
+  return apiRequest(`/admin/users/${userId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
   });
 }
 
 export async function updateTicketCheckIn(ticketId: string, checkedIn: boolean): Promise<Ticket> {
-  return apiRequest(`/api/tickets/${ticketId}/checkin`, {
+  return apiRequest(`/tickets/${ticketId}/checkin`, {
     method: 'PUT',
     body: JSON.stringify({ checkedIn }),
   });
 }
 
 export async function getTicketByQrCode(qrCode: string): Promise<Ticket | undefined> {
-  return apiRequest(`/api/tickets/qr/${qrCode}`);
+  return apiRequest(`/tickets/qr/${qrCode}`);
 }
 
 // Events API
 export async function updateEventStatus(eventId: string, status: string): Promise<Event> {
-  return apiRequest(`/api/admin/events/${eventId}/status`, {
+  return apiRequest(`/admin/events/${eventId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
   });
@@ -244,9 +248,8 @@ export async function updateEventStatus(eventId: string, status: string): Promis
 
 // Orders API
 export async function updateOrderStatus(orderId: string, status: string): Promise<Order> {
-  return apiRequest(`/api/admin/orders/${orderId}/status`, {
+  return apiRequest(`/admin/orders/${orderId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
   });
 }
-

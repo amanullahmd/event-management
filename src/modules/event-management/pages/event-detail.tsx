@@ -140,11 +140,22 @@ export default function EventDetailsPage() {
       {/* Hero Section */}
       <div className="relative">
         <div className="w-full h-72 md:h-96 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-pink-500 relative overflow-hidden">
-          {/* Decorative elements */}
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-10 left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 right-10 w-48 h-48 bg-white/20 rounded-full blur-3xl"></div>
-          </div>
+          {event.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={event.image}
+              alt={event.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <>
+              {/* Decorative placeholder elements */}
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-10 left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-10 right-10 w-48 h-48 bg-white/20 rounded-full blur-3xl"></div>
+              </div>
+            </>
+          )}
           <div className="absolute inset-0 bg-black/20" />
           
           {/* Back button */}

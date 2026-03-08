@@ -8,7 +8,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
-    'Use EventHub': [
+    'Use PulsarFlow': [
       { label: 'Find Events', href: '/events' },
       { label: 'Create Events', href: '/register' },
       { label: 'Pricing', href: '/' },
@@ -37,9 +37,9 @@ export function Footer() {
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                E
+                P
               </div>
-              <span className="font-bold text-xl text-(--color-text-primary)">EventHub</span>
+              <span className="font-bold text-xl text-(--color-text-primary)">PulsarFlow</span>
             </Link>
             <p className="text-sm text-(--color-text-secondary) mb-6 max-w-xs">
               The all-in-one event management platform. Create, promote, and sell tickets to your events with ease.
@@ -85,7 +85,7 @@ export function Footer() {
         <div className="py-6 border-t border-(--color-border)">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-(--color-text-tertiary)">
-              © {currentYear} EventHub. All rights reserved.
+              © {currentYear} PulsarFlow. All rights reserved.
             </p>
             <div className="flex flex-wrap justify-center gap-6">
               <Link href="/" className="text-sm text-(--color-text-tertiary) hover:text-(--color-text-primary) transition-colors">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { User, UserRole } from '../types/user';
 
 /**
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * AuthProvider component that wraps the application with authentication context
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isTokenExpiringSoon, setIsTokenExpiringSoon] = useState(false);
@@ -179,6 +181,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(user);
       checkTokenExpiration();
+
+      // Redirect to role-appropriate dashboard after successful login
+      const roleDashboardRoutes: Record<string, string> = {
+        ADMIN: '/admin',
+        ORGANIZER: '/organizer',
+        CUSTOMER: '/dashboard',
+      };
+      const redirectPath = roleDashboardRoutes[user.role] || '/dashboard';
+      router.push(redirectPath);
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof TypeError && error.message === 'Failed to fetch') {

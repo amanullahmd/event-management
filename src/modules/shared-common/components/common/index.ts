@@ -7,3 +7,4 @@ export { StatsCard } from './StatsCard';
 export { QuickActions } from './QuickActions';
 export { ActivityFeed } from './ActivityFeed';
 export { WelcomeBanner } from './WelcomeBanner';
+export { RoleGuard } from './RoleGuard';
