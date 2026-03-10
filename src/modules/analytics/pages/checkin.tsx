@@ -51,7 +51,7 @@ export default function CheckinPage() {
       setIsLoading(true);
       try {
         const events = await getEventsByOrganizerId(user.id);
-        setOrganizerEvents(events.filter(e => e.status === 'active'));
+        setOrganizerEvents(events.filter(e => ['active', 'ACTIVE', 'published', 'PUBLISHED'].includes(e.status)));
       } catch (error) {
         console.error('Failed to fetch events:', error);
       } finally {

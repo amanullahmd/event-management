@@ -1,18 +1,22 @@
 /**
  * User type definitions for the Event Management & Ticketing System
+ * Matches backend UserRoleResponse DTO
  */
 
 export type UserRole = 'ADMIN' | 'ORGANIZER' | 'CUSTOMER';
-export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked';
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked' | 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
 export interface User {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   role: UserRole;
-  status: UserStatus;
-  createdAt: Date;
+  status: UserStatus | string;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
   profileImage?: string;
 }
 
@@ -35,4 +39,3 @@ export interface Document {
 export interface AuthUser extends User {
   token?: string;
 }
-

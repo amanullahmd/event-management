@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getAllOrders, type Order, type Event } from '@/modules/shared-common/services/apiService';
+import { getEventById, getAllOrders, type AdminOrder, type Event } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 
 /**
@@ -13,7 +13,7 @@ export default function EventAnalyticsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('all');
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<AdminOrder[]>([]);
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -87,21 +87,15 @@ export default function EventAnalyticsPage() {
   const handleExportAttendees = () => {
     if (!event) return;
 
-    const headers = ['Name', 'Email', 'Ticket Type', 'Purchase Date', 'QR Code'];
-    const rows = eventOrders.flatMap((order) =>
-      order.tickets.map((ticket) => {
-        const ticketType = event.ticketTypes.find(
-          (tt) => tt.id === ticket.ticketTypeId
-        );
-        return [
-          'Customer Name', // Placeholder - would need customer data
-          'customer@example.com', // Placeholder
-          ticketType?.name || 'Unknown',
-          new Date(order.createdAt).toLocaleDateString(),
-          ticket.qrCode,
-        ];
-      })
-    );
+    const headers = ['Customer', 'Email', 'Event', 'Date', 'Amount', 'Status'];
+    const rows = eventOrders.map((order) => [
+      order.customerName || 'Customer',
+      order.customerEmail || '',
+      order.eventName || 'Unknown',
+      new Date(order.createdAt).toLocaleDateString(),
+      (order.totalAmount || 0).toFixed(2),
+      order.status || 'Unknown',
+    ]);
 
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -347,7 +341,7 @@ export default function EventAnalyticsPage() {
                       {new Date(order.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">
-                      {order.tickets.length}
+                      {1}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-medium">
                       {formatCurrency(order.totalAmount)}
@@ -355,14 +349,14 @@ export default function EventAnalyticsPage() {
                     <td className="px-6 py-4 text-sm">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'completed'
+                          ['completed', 'COMPLETED', 'confirmed', 'CONFIRMED'].includes(order.status)
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                            : order.status === 'pending'
+                            : ['pending', 'PENDING'].includes(order.status)
                             ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400'
                             : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
                         }`}
                       >
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {(order.status || 'unknown').charAt(0).toUpperCase() + (order.status || 'unknown').slice(1).toLowerCase()}
                       </span>
                     </td>
                   </tr>

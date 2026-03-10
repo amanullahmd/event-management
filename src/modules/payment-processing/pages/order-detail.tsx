@@ -371,7 +371,7 @@ export default function OrderDetailPage() {
           <div className="flex justify-between text-sm">
             <span className="text-slate-600 dark:text-slate-400">Payment Method</span>
             <span className="text-slate-900 dark:text-white font-medium">
-              {formatPaymentMethod(order.paymentMethod)}
+              {formatPaymentMethod(order.paymentMethod || '')}
             </span>
           </div>
           <div className="flex justify-between text-sm">

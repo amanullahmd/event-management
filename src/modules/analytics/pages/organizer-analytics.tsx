@@ -1,105 +1,153 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getAllEvents, getAllOrders } from '@/modules/shared-common/services/apiService';
+import {
+  getAllEvents,
+  getAllOrders,
+  type Event,
+  type AdminOrder,
+} from '@/modules/shared-common/services/apiService';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Button } from '@/modules/shared-common/components/ui/button';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Ticket, 
-  Calendar, 
+import {
+  TrendingUp,
+  DollarSign,
+  Ticket,
+  Calendar,
   Users,
   BarChart3,
   PieChart,
   ArrowUpRight,
-  Download
+  Download,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
-
-type Event = Awaited<ReturnType<typeof getAllEvents>>[number];
-type Order = Awaited<ReturnType<typeof getAllOrders>>[number];
 
 export default function OrganizerAnalyticsPage() {
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
-  const [organizerOrders, setOrganizerOrders] = useState<Order[]>([]);
+  const [organizerOrders, setOrganizerOrders] = useState<AdminOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch organizer's events and orders
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+  const fetchData = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
-      setIsLoading(true);
-      try {
-        const [allEvents, allOrders] = await Promise.all([
-          getAllEvents(),
-          getAllOrders()
-        ]);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [allEvents, allOrders] = await Promise.all([
+        getAllEvents(),
+        getAllOrders(),
+      ]);
 
-        const events = allEvents.filter((event) => event.organizerId === user.id);
-        setOrganizerEvents(events);
+      const events = allEvents.filter((event) => event.organizerId === user.id);
+      setOrganizerEvents(events);
 
-        const eventIds = events.map((e) => e.id);
-        const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
-        setOrganizerOrders(orders);
-      } catch (error) {
-        console.error('Failed to fetch analytics data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+      const eventIds = events.map((e) => e.id);
+      const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
+      setOrganizerOrders(orders);
+    } catch (err) {
+      console.error('Failed to fetch analytics data:', err);
+      setError('Failed to load analytics data');
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
 
-  // Calculate comprehensive analytics
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Filter orders by date range
+  const filteredOrders = useMemo(() => {
+    if (dateRange === 'all') return organizerOrders;
+
+    const now = new Date();
+    const cutoff = new Date();
+    if (dateRange === 'week') cutoff.setDate(now.getDate() - 7);
+    else if (dateRange === 'month') cutoff.setDate(now.getDate() - 30);
+    else if (dateRange === 'year') cutoff.setFullYear(now.getFullYear() - 1);
+
+    return organizerOrders.filter(
+      (order) => new Date(order.createdAt) >= cutoff
+    );
+  }, [organizerOrders, dateRange]);
+
   const analytics = useMemo(() => {
-    const totalRevenue = organizerOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const totalTicketsSold = organizerEvents.reduce((sum, e) => sum + e.totalAttendees, 0);
-    const totalCapacity = organizerEvents.reduce((sum, e) => 
-      sum + e.ticketTypes.reduce((s, tt) => s + tt.quantity, 0), 0);
+    const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const totalTicketsSold = organizerEvents.reduce(
+      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0),
+      0
+    );
+    const totalCapacity = organizerEvents.reduce(
+      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.quantity || 0), 0),
+      0
+    );
     const avgTicketPrice = totalTicketsSold > 0 ? totalRevenue / totalTicketsSold : 0;
     const conversionRate = totalCapacity > 0 ? (totalTicketsSold / totalCapacity) * 100 : 0;
 
     // Revenue by event
-    const revenueByEvent = organizerEvents.map(event => {
-      const eventRevenue = event.ticketTypes.reduce((sum, tt) => sum + (tt.price * tt.sold), 0);
-      const ticketsSold = event.ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
-      return {
-        id: event.id,
-        name: event.name,
-        revenue: eventRevenue,
-        ticketsSold,
-        date: event.date,
-        status: event.status,
-      };
-    }).sort((a, b) => b.revenue - a.revenue);
+    const revenueByEvent = organizerEvents
+      .map((event) => {
+        const eventRevenue = (event.ticketTypes || []).reduce(
+          (sum, tt) => sum + ((tt.price || 0) * (tt.sold || 0)),
+          0
+        );
+        const ticketsSold = (event.ticketTypes || []).reduce(
+          (sum, tt) => sum + (tt.sold || 0),
+          0
+        );
+        return {
+          id: event.id,
+          name: event.name,
+          revenue: eventRevenue,
+          ticketsSold,
+          date: event.date,
+          status: event.status,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
 
     // Ticket type breakdown
-    const ticketTypeBreakdown = organizerEvents.reduce((acc, event) => {
-      event.ticketTypes.forEach(tt => {
-        const typeName = tt.type || tt.name;
-        if (!acc[typeName]) {
-          acc[typeName] = { sold: 0, revenue: 0 };
-        }
-        acc[typeName].sold += tt.sold;
-        acc[typeName].revenue += tt.price * tt.sold;
-      });
-      return acc;
-    }, {} as Record<string, { sold: number; revenue: number }>);
+    const ticketTypeBreakdown = organizerEvents.reduce(
+      (acc, event) => {
+        (event.ticketTypes || []).forEach((tt) => {
+          const typeName = tt.type || tt.name || 'General';
+          if (!acc[typeName]) {
+            acc[typeName] = { sold: 0, revenue: 0 };
+          }
+          acc[typeName].sold += tt.sold || 0;
+          acc[typeName].revenue += (tt.price || 0) * (tt.sold || 0);
+        });
+        return acc;
+      },
+      {} as Record<string, { sold: number; revenue: number }>
+    );
 
-    // Recent orders
-    const recentOrders = [...organizerOrders]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    // Recent orders (sorted by date, most recent first)
+    const recentOrders = [...filteredOrders]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
       .slice(0, 5);
+
+    // Orders by status
+    const ordersByStatus = filteredOrders.reduce(
+      (acc, order) => {
+        const status = (order.status || 'unknown').toLowerCase();
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     return {
       totalRevenue,
@@ -108,41 +156,48 @@ export default function OrganizerAnalyticsPage() {
       avgTicketPrice,
       conversionRate,
       totalEvents: organizerEvents.length,
-      activeEvents: organizerEvents.filter(e => e.status === 'active').length,
-      totalOrders: organizerOrders.length,
+      activeEvents: organizerEvents.filter((e) =>
+        ['active', 'published'].includes((e.status || '').toLowerCase())
+      ).length,
+      totalOrders: filteredOrders.length,
       revenueByEvent,
       ticketTypeBreakdown,
       recentOrders,
+      ordersByStatus,
     };
-  }, [organizerEvents, organizerOrders]);
+  }, [organizerEvents, filteredOrders]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(value);
-  };
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: Date | string) =>
+    new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
-  };
 
   // Export analytics as CSV
   const handleExportAnalytics = () => {
-    const headers = ['Event Name', 'Revenue', 'Tickets Sold', 'Date', 'Status'];
-    const rows = analytics.revenueByEvent.map(event => [
-      event.name,
+    const headers = [
+      'Event Name',
+      'Revenue',
+      'Tickets Sold',
+      'Date',
+      'Status',
+    ];
+    const rows = analytics.revenueByEvent.map((event) => [
+      `"${event.name}"`,
       event.revenue.toFixed(2),
       event.ticketsSold.toString(),
       formatDate(event.date),
       event.status,
     ]);
 
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -152,59 +207,110 @@ export default function OrganizerAnalyticsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const getStatusBadge = (status: string) => {
+    const s = (status || '').toLowerCase();
+    const styles: Record<string, string> = {
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      refunded: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    };
+    return styles[s] || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">
-            Track your event performance and revenue
-          </p>
+          <div className="h-8 w-32 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+          <div className="h-5 w-56 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse mt-2" />
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-500 dark:text-slate-400">Loading analytics...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 animate-pulse">
+              <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+              <div className="h-8 w-20 bg-slate-200 dark:bg-slate-700 rounded mt-2" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 animate-pulse h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center bg-red-50 dark:bg-red-900/10 p-8 rounded-2xl border border-red-200 dark:border-red-800 max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-red-600 text-xl font-bold mb-2">Error</h2>
+          <p className="text-red-500 mb-6">{error}</p>
+          <button
+            onClick={fetchData}
+            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" /> Retry
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">Track your sales and performance</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Analytics</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Track your sales and performance
+          </p>
         </div>
-        <Button 
-          onClick={handleExportAnalytics}
-          className="bg-violet-600 hover:bg-violet-700 text-white"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export Report
-        </Button>
+        <div className="flex gap-3">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm text-slate-700 dark:text-slate-300"
+          >
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+          <Button
+            onClick={handleExportAnalytics}
+            className="bg-violet-600 hover:bg-violet-700 text-white"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
       {/* Date Range Filter */}
-      <Card className="p-4 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Period:</span>
-          {(['week', 'month', 'year', 'all'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setDateRange(range)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                dateRange === range
-                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              {range === 'week' ? '7 Days' : range === 'month' ? '30 Days' : range === 'year' ? '12 Months' : 'All Time'}
-            </button>
-          ))}
-        </div>
-      </Card>
+      <div className="flex flex-wrap items-center gap-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-2">
+        {(['week', 'month', 'year', 'all'] as const).map((range) => (
+          <button
+            key={range}
+            onClick={() => setDateRange(range)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              dateRange === range
+                ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            {range === 'week'
+              ? '7 Days'
+              : range === 'month'
+              ? '30 Days'
+              : range === 'year'
+              ? '12 Months'
+              : 'All Time'}
+          </button>
+        ))}
+      </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -212,11 +318,9 @@ export default function OrganizerAnalyticsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-white/80">Total Revenue</p>
-              <p className="text-3xl font-bold text-white mt-1">{formatCurrency(analytics.totalRevenue)}</p>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingUp className="w-4 h-4 text-green-300" />
-                <span className="text-sm text-white/80">+12.5% from last period</span>
-              </div>
+              <p className="text-3xl font-bold text-white mt-1">
+                {formatCurrency(analytics.totalRevenue)}
+              </p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-white" />
@@ -224,15 +328,15 @@ export default function OrganizerAnalyticsPage() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tickets Sold</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{analytics.totalTicketsSold}</p>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">+8.2% from last period</span>
-              </div>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Tickets Sold
+              </p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                {analytics.totalTicketsSold}
+              </p>
             </div>
             <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center">
               <Ticket className="w-6 h-6 text-violet-600 dark:text-violet-400" />
@@ -240,15 +344,15 @@ export default function OrganizerAnalyticsPage() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Ticket Price</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(analytics.avgTicketPrice)}</p>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingDown className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">-2.1% from last period</span>
-              </div>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Avg Ticket Price
+              </p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                {formatCurrency(analytics.avgTicketPrice)}
+              </p>
             </div>
             <div className="w-12 h-12 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-xl flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-fuchsia-600 dark:text-fuchsia-400" />
@@ -256,15 +360,15 @@ export default function OrganizerAnalyticsPage() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Conversion Rate</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{analytics.conversionRate.toFixed(1)}%</p>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">+5.3% from last period</span>
-              </div>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Conversion Rate
+              </p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                {analytics.conversionRate.toFixed(1)}%
+              </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
               <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -275,36 +379,48 @@ export default function OrganizerAnalyticsPage() {
 
       {/* Secondary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
               <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Events</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{analytics.totalEvents}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Total Events
+              </p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white">
+                {analytics.totalEvents}
+              </p>
             </div>
           </div>
         </Card>
-        <Card className="p-5 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Active Events</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{analytics.activeEvents}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Active Events
+              </p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white">
+                {analytics.activeEvents}
+              </p>
             </div>
           </div>
         </Card>
-        <Card className="p-5 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
               <PieChart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Orders</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{analytics.totalOrders}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Total Orders
+              </p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white">
+                {analytics.totalOrders}
+              </p>
             </div>
           </div>
         </Card>
@@ -312,37 +428,57 @@ export default function OrganizerAnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue by Event */}
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Revenue by Event</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Top performing events</p>
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Revenue by Event
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Top performing events
+            </p>
           </div>
-          <div className="divide-y divide-gray-200 dark:divide-slate-700">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {analytics.revenueByEvent.length === 0 ? (
-              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              <div className="p-6 text-center text-slate-500 dark:text-slate-400">
                 No events yet
               </div>
             ) : (
               analytics.revenueByEvent.slice(0, 5).map((event, index) => (
-                <div key={event.id} className="p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <div
+                  key={event.id}
+                  className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                        index === 0 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
-                        index === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' :
-                        index === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' :
-                        'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                          index === 0
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+                            : index === 1
+                            ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                            : index === 2
+                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{event.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{event.ticketsSold} tickets sold</p>
+                        <p className="font-medium text-slate-900 dark:text-white">
+                          {event.name}
+                        </p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {event.ticketsSold} tickets sold
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(event.revenue)}</p>
-                      <Link href={`/organizer/events/${event.id}/analytics`}>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        {formatCurrency(event.revenue)}
+                      </p>
+                      <Link
+                        href={`/organizer/events/${event.id}/analytics`}
+                      >
                         <span className="text-sm text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 justify-end">
                           Details <ArrowUpRight className="w-3 h-3" />
                         </span>
@@ -356,43 +492,56 @@ export default function OrganizerAnalyticsPage() {
         </Card>
 
         {/* Ticket Type Breakdown */}
-        <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ticket Type Breakdown</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sales by ticket category</p>
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Ticket Type Breakdown
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Sales by ticket category
+            </p>
           </div>
           <div className="p-6">
             {Object.keys(analytics.ticketTypeBreakdown).length === 0 ? (
-              <div className="text-center text-gray-500 dark:text-gray-400">
+              <div className="text-center text-slate-500 dark:text-slate-400">
                 No ticket data yet
               </div>
             ) : (
               <div className="space-y-4">
-                {Object.entries(analytics.ticketTypeBreakdown).map(([type, data]) => {
-                  const percentage = analytics.totalRevenue > 0 
-                    ? (data.revenue / analytics.totalRevenue) * 100 
-                    : 0;
-                  return (
-                    <div key={type}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-900 dark:text-white capitalize">{type}</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {formatCurrency(data.revenue)} ({data.sold} sold)
-                        </span>
+                {Object.entries(analytics.ticketTypeBreakdown).map(
+                  ([type, data]) => {
+                    const percentage =
+                      analytics.totalRevenue > 0
+                        ? (data.revenue / analytics.totalRevenue) * 100
+                        : 0;
+                    return (
+                      <div key={type}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-slate-900 dark:text-white capitalize">
+                            {type}
+                          </span>
+                          <span className="text-sm text-slate-500 dark:text-slate-400">
+                            {formatCurrency(data.revenue)} ({data.sold} sold)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                          <div
+                            className={`h-3 rounded-full ${
+                              type.toLowerCase().includes('vip')
+                                ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                                : type.toLowerCase().includes('early')
+                                ? 'bg-gradient-to-r from-green-400 to-emerald-500'
+                                : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(percentage, 100)}%`,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                        <div 
-                          className={`h-3 rounded-full ${
-                            type.includes('vip') ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
-                            type.includes('early') ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
-                            'bg-gradient-to-r from-violet-500 to-fuchsia-500'
-                          }`}
-                          style={{ width: `${Math.min(percentage, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </div>
             )}
           </div>
@@ -400,45 +549,75 @@ export default function OrganizerAnalyticsPage() {
       </div>
 
       {/* Recent Orders */}
-      <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Orders</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Latest ticket purchases</p>
-          </div>
+      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            Recent Orders
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Latest ticket purchases
+          </p>
         </div>
         {analytics.recentOrders.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+          <div className="p-6 text-center text-slate-500 dark:text-slate-400">
             No orders yet
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-slate-700/50">
+              <thead className="bg-slate-50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tickets</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Order ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Event
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Status
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {analytics.recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{order.id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDate(order.createdAt)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{order.tickets.length}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(order.totalAmount)}</td>
+                  <tr
+                    key={order.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                      {order.id.length > 12
+                        ? order.id.slice(0, 12) + '...'
+                        : order.id}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                      {order.customerName || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                      {order.eventName || 'Unknown Event'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                      {formatDate(order.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                      {formatCurrency(order.totalAmount || 0)}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        order.status === 'completed' 
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : order.status === 'pending'
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                      }`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(order.status)}`}
+                      >
+                        {(order.status || 'unknown')
+                          .charAt(0)
+                          .toUpperCase() +
+                          (order.status || 'unknown').slice(1).toLowerCase()}
                       </span>
                     </td>
                   </tr>
@@ -451,4 +630,3 @@ export default function OrganizerAnalyticsPage() {
     </div>
   );
 }
-

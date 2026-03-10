@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiRequest } from '@/modules/shared-common/utils/api';
-import { 
-  Ticket, 
-  Calendar, 
-  CreditCard, 
-  User, 
+import { getEventById } from '@/modules/shared-common/services/apiService';
+import type { Event as EventType } from '@/modules/shared-common/services/apiService';
+import {
+  Ticket,
+  Calendar,
+  CreditCard,
+  User,
   Search,
   CheckCircle,
   AlertCircle,
@@ -65,6 +67,7 @@ export default function ModernCustomerDashboard() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [tickets, setTickets] = useState<TicketResponse[]>([]);
+  const [eventNames, setEventNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -87,6 +90,25 @@ export default function ModernCustomerDashboard() {
 
       setOrders(allOrders);
       setTickets(allTickets);
+
+      // Fetch event names for all unique eventIds
+      const uniqueEventIds = [...new Set([
+        ...allOrders.map((o) => o.eventId),
+        ...allTickets.map((t) => t.eventId),
+      ].filter(Boolean))];
+
+      const names: Record<string, string> = {};
+      await Promise.allSettled(
+        uniqueEventIds.map(async (eventId) => {
+          try {
+            const event = await getEventById(eventId);
+            if (event) {
+              names[eventId] = event.name || event.title || `Event #${eventId.slice(0, 8)}`;
+            }
+          } catch { /* skip */ }
+        })
+      );
+      setEventNames(names);
       setLastRefresh(new Date());
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
@@ -400,8 +422,8 @@ export default function ModernCustomerDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        Event {order.eventId ? `#${order.eventId.length > 8 ? order.eventId.slice(0, 8) : order.eventId}` : 'N/A'}
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {eventNames[order.eventId] || (order.eventId ? `Event #${order.eventId.slice(0, 8)}` : 'N/A')}
                       </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
