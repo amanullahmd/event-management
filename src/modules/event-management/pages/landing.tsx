@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -6,16 +6,26 @@ import { LocationProvider, useLocation } from '@/lib/context/LocationContext';
 import { HeroSection } from '@/modules/shared-common/components/landing/HeroSection';
 import { TabFilter } from '@/modules/shared-common/components/landing/TabFilter';
 import { TrendingSection } from '@/modules/shared-common/components/landing/TrendingSection';
-import { PriceSection } from '@/modules/shared-common/components/landing/PriceSection';
-import { ThisWeekSection } from '@/modules/shared-common/components/landing/ThisWeekSection';
 import { CategoryInterests } from '@/modules/shared-common/components/landing/CategoryInterests';
 import { CreateEventCTA } from '@/modules/shared-common/components/landing/CreateEventCTA';
+import { FeaturedCalendars } from '@/modules/shared-common/components/landing/FeaturedCalendars';
+import { PopularCities } from '@/modules/shared-common/components/landing/PopularCities';
+import { SocialProofSection } from '@/modules/shared-common/components/landing/SocialProofSection';
+import { NewsletterSignup } from '@/modules/shared-common/components/landing/NewsletterSignup';
 import { useEventFilters } from '@/lib/hooks/useEventFilters';
+import { useInView } from '@/lib/hooks/useInView';
+import { useCountUp } from '@/lib/hooks/useCountUp';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiRequest } from '@/modules/shared-common/utils/api';
 import { CategoryFilterBar } from '@/modules/event-management/components/CategoryFilterBar';
 import { fetchCategories, type Category } from '@/modules/event-management/components/CategorySelector';
 import { PulsarFlowLogo } from '@/modules/shared-common/components/common/PulsarFlowLogo';
+import {
+  mockFeaturedCalendars,
+  mockPopularCities,
+  mockTestimonials,
+  mockTrustMetrics,
+} from '@/lib/mock-landing-data';
 import type { Event } from '@/lib/types/event';
 import type { ExtendedEvent } from '@/modules/shared-common/components/shared/EventCard';
 import {
@@ -29,6 +39,9 @@ import {
   Twitter,
   Instagram,
   Linkedin,
+  ArrowUp,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +101,6 @@ const ROLE_ROUTES: Record<string, string> = {
   CUSTOMER: '/dashboard',
 };
 
-/** Derive live stats from the events we already fetched */
 function deriveStats(events: Event[]): PlatformStats {
   const categories = new Set(events.map((e) => e.category).filter(Boolean));
   const organizers = new Set(events.map((e) => e.organizerId).filter(Boolean));
@@ -100,30 +112,98 @@ function deriveStats(events: Event[]): PlatformStats {
 }
 
 /* ------------------------------------------------------------------ */
+/*  AnimatedSection — fade-up on scroll wrapper                        */
+/* ------------------------------------------------------------------ */
+
+function AnimatedSection({
+  children,
+  className = '',
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const { ref, isInView } = useInView({ threshold: 0.08 });
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: isInView ? 1 : 0,
+        transform: isInView ? 'translateY(0)' : 'translateY(32px)',
+        transition: `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  LandingNav                                                         */
 /* ------------------------------------------------------------------ */
 
 function LandingNav() {
   const { user, isAuthenticated } = useAuth();
   const dashboardRoute = user?.role ? (ROLE_ROUTES[user.role] ?? '/dashboard') : '/dashboard';
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-slate-950/90 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg shadow-sm border-b border-slate-200/50 dark:border-slate-800/50'
+          : 'bg-transparent'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/" aria-label="PulsarFlow home">
           <PulsarFlowLogo size="md" variant="full" />
         </Link>
-        <nav className="flex items-center gap-3">
+
+        <nav className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/events"
+            className={`hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              scrolled
+                ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            Browse Events
+          </Link>
+
           {isAuthenticated ? (
-            <Link href={dashboardRoute} className="px-5 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md shadow-violet-500/20">
-              Go to Dashboard
+            <Link
+              href={dashboardRoute}
+              className="px-5 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md shadow-violet-500/20"
+            >
+              Dashboard
             </Link>
           ) : (
             <>
-              <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Link
+                href="/login"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  scrolled
+                    ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
                 Log in
               </Link>
-              <Link href="/register" className="px-5 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md shadow-violet-500/20">
+              <Link
+                href="/register"
+                className="px-5 py-2 rounded-lg bg-white text-violet-700 text-sm font-semibold hover:bg-slate-50 transition-all shadow-md"
+              >
                 Sign up free
               </Link>
             </>
@@ -135,150 +215,254 @@ function LandingNav() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  StatsBar — live numbers from the database                          */
+/*  TrustBar — animated count-up stats + trust badges                  */
 /* ------------------------------------------------------------------ */
 
-function StatsBar({ stats }: { stats: PlatformStats }) {
-  const items = [
-    { label: 'Live Events', value: stats.totalEvents, icon: <CalendarCheck className="w-5 h-5" /> },
-    { label: 'Categories', value: stats.totalCategories, icon: <Globe className="w-5 h-5" /> },
-    { label: 'Organizers', value: stats.totalOrganizers, icon: <Users className="w-5 h-5" /> },
+function TrustBar({ stats }: { stats: PlatformStats }) {
+  const { ref, isInView } = useInView({ threshold: 0.3 });
+
+  const eventsCount = useCountUp(stats.totalEvents > 0 ? stats.totalEvents : 50000, {
+    startWhen: isInView,
+    duration: 2000,
+  });
+  const organizersCount = useCountUp(mockTrustMetrics.organizers, {
+    startWhen: isInView,
+    duration: 2200,
+  });
+  const categoriesCount = useCountUp(stats.totalCategories > 0 ? stats.totalCategories : 25, {
+    startWhen: isInView,
+    duration: 1800,
+  });
+
+  const metrics = [
+    { label: 'Events Hosted', value: eventsCount, suffix: '+', icon: CalendarCheck },
+    { label: 'Organizers', value: organizersCount, suffix: '+', icon: Users },
+    { label: 'Categories', value: categoriesCount, suffix: '', icon: Globe },
+  ];
+
+  const badges = [
+    { icon: Shield, text: 'Secure Payments' },
+    { icon: BarChart3, text: 'Real-time Analytics' },
+    { icon: Zap, text: 'Instant Check-in' },
   ];
 
   return (
-    <section className="bg-gradient-to-r from-violet-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 border-y border-slate-200 dark:border-slate-800">
-      <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-3 gap-4 text-center">
-        {items.map((item) => (
-          <div key={item.label} className="flex flex-col items-center gap-1">
-            <span className="text-violet-600 dark:text-violet-400">{item.icon}</span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-              {item.value.toLocaleString()}
+    <section ref={ref} className="relative bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800/50">
+      <div className="max-w-6xl mx-auto px-4 py-12 sm:py-16">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-8 mb-10">
+          {metrics.map((m) => (
+            <div key={m.label} className="text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 mb-3">
+                <m.icon className="w-6 h-6" />
+              </div>
+              <p className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tabular-nums">
+                {m.value.toLocaleString()}{m.suffix}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{m.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Badges row */}
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
+          {badges.map((b) => (
+            <span
+              key={b.text}
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400"
+            >
+              <b.icon className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+              {b.text}
             </span>
-            <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{item.label}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  HowItWorks                                                         */
+/*  HowItWorks — enhanced with connecting line + stagger               */
 /* ------------------------------------------------------------------ */
 
 function HowItWorks() {
   const steps = [
-    { icon: <Globe className="w-7 h-7" />, title: 'Discover', desc: 'Browse events by category, location, or date.' },
-    { icon: <Ticket className="w-7 h-7" />, title: 'Book', desc: 'Secure your tickets in seconds with safe checkout.' },
-    { icon: <Zap className="w-7 h-7" />, title: 'Experience', desc: 'Show your QR code at the door and enjoy the event.' },
+    {
+      icon: Globe,
+      title: 'Discover',
+      desc: 'Browse events by category, location, or date. Find exactly what excites you.',
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      icon: Ticket,
+      title: 'Book',
+      desc: 'Secure your tickets in seconds with our safe and seamless checkout.',
+      color: 'from-violet-500 to-purple-500',
+    },
+    {
+      icon: Zap,
+      title: 'Experience',
+      desc: 'Show your QR code at the door and enjoy an unforgettable event.',
+      color: 'from-pink-500 to-rose-500',
+    },
   ];
 
   return (
-    <section className="max-w-5xl mx-auto px-4 py-16">
-      <h2 className="text-2xl sm:text-3xl font-bold text-center text-slate-900 dark:text-white mb-10">
-        How PulsarFlow Works
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        {steps.map((step, i) => (
-          <div key={step.title} className="flex flex-col items-center text-center gap-3">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/25">
-              {step.icon}
-            </div>
-            <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-              Step {i + 1}
-            </span>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{step.title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">{step.desc}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  TrustBanner                                                        */
-/* ------------------------------------------------------------------ */
-
-function TrustBanner() {
-  const badges = [
-    { icon: <Shield className="w-5 h-5" />, text: 'Secure Payments' },
-    { icon: <BarChart3 className="w-5 h-5" />, text: 'Real-time Analytics' },
-    { icon: <Users className="w-5 h-5" />, text: 'Organizer Tools' },
-    { icon: <CalendarCheck className="w-5 h-5" />, text: 'QR Check-in' },
-  ];
-
-  return (
-    <section className="bg-slate-50 dark:bg-slate-900/50 py-8">
-      <div className="max-w-5xl mx-auto px-4 flex flex-wrap justify-center gap-6">
-        {badges.map((b) => (
-          <span key={b.text} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <span className="text-violet-600 dark:text-violet-400">{b.icon}</span>
-            {b.text}
+    <section className="bg-slate-50 dark:bg-slate-900/50">
+      <div className="max-w-5xl mx-auto px-4 py-20 sm:py-24">
+        <AnimatedSection className="text-center mb-14">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 text-sm font-medium mb-4">
+            <Sparkles className="w-4 h-4" />
+            Simple as 1-2-3
           </span>
-        ))}
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+            How PulsarFlow Works
+          </h2>
+        </AnimatedSection>
+
+        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-8">
+          {/* Connecting line (desktop) */}
+          <div className="hidden sm:block absolute top-[52px] left-[16.67%] right-[16.67%] h-0.5 bg-gradient-to-r from-blue-200 via-violet-200 to-pink-200 dark:from-blue-800 dark:via-violet-800 dark:to-pink-800" />
+
+          {steps.map((step, i) => (
+            <AnimatedSection key={step.title} delay={i * 150}>
+              <div className="flex flex-col items-center text-center relative">
+                {/* Step number badge */}
+                <div className="absolute -top-2 -right-2 sm:top-auto sm:-top-3 sm:right-auto sm:left-[calc(50%+20px)] w-7 h-7 rounded-full bg-white dark:bg-slate-900 border-2 border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400 text-xs font-bold flex items-center justify-center z-10 shadow-sm">
+                  {i + 1}
+                </div>
+
+                {/* Icon */}
+                <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center text-white shadow-lg mb-5 relative z-0`}>
+                  <step.icon className="w-9 h-9" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  LandingFooter                                                      */
+/*  LandingFooter — enhanced with back-to-top + richer content         */
 /* ------------------------------------------------------------------ */
 
 function LandingFooter() {
   const year = new Date().getFullYear();
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <footer className="bg-slate-900 dark:bg-slate-950 text-slate-400 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+    <footer className="bg-slate-900 dark:bg-slate-950 text-slate-400">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
             <PulsarFlowLogo size="lg" variant="full" className="mb-4" />
-            <p className="text-sm leading-relaxed">
-              The modern event management platform. Discover, create, and manage events with ease.
+            <p className="text-sm leading-relaxed mb-5">
+              The modern event management platform. Discover, create, and manage unforgettable experiences with ease.
             </p>
-            <div className="flex gap-4 mt-5">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="hover:text-white transition-colors"><Linkedin className="w-5 h-5" /></a>
+            <div className="flex gap-3">
+              {[
+                { icon: Twitter, href: 'https://twitter.com', label: 'Twitter', hoverColor: 'hover:text-sky-400' },
+                { icon: Instagram, href: 'https://instagram.com', label: 'Instagram', hoverColor: 'hover:text-pink-400' },
+                { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn', hoverColor: 'hover:text-blue-400' },
+              ].map(({ icon: Icon, href, label, hoverColor }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className={`w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center ${hoverColor} hover:bg-slate-700 transition-all`}
+                >
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
             </div>
           </div>
 
           {/* Explore */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Explore</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/events" className="hover:text-white transition-colors">Browse Events</Link></li>
-              <li><Link href="/events?filter=today" className="hover:text-white transition-colors">Today&apos;s Events</Link></li>
-              <li><Link href="/events?filter=free" className="hover:text-white transition-colors">Free Events</Link></li>
-              <li><Link href="/events?filter=online" className="hover:text-white transition-colors">Online Events</Link></li>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Explore</h4>
+            <ul className="space-y-2.5 text-sm">
+              {[
+                { href: '/events', label: 'Browse Events' },
+                { href: '/events?filter=today', label: "Today's Events" },
+                { href: '/events?filter=free', label: 'Free Events' },
+                { href: '/events?filter=online', label: 'Online Events' },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                    {link.label}
+                    <ChevronRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Organizers */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Organizers</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/register" className="hover:text-white transition-colors">Create an Event</Link></li>
-              <li><Link href="/organizer" className="hover:text-white transition-colors">Organizer Dashboard</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Sign In</Link></li>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Organizers</h4>
+            <ul className="space-y-2.5 text-sm">
+              {[
+                { href: '/register', label: 'Create an Event' },
+                { href: '/organizer', label: 'Organizer Dashboard' },
+                { href: '/login', label: 'Sign In' },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                    {link.label}
+                    <ChevronRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Legal */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Legal</h4>
+            <ul className="space-y-2.5 text-sm">
+              {[
+                { href: '/privacy', label: 'Privacy Policy' },
+                { href: '/terms', label: 'Terms of Service' },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                    {link.label}
+                    <ChevronRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-slate-800 mt-10 pt-6 text-center text-xs text-slate-500">
-          &copy; {year} PulsarFlow. All rights reserved.
+        {/* Bottom bar */}
+        <div className="border-t border-slate-800 mt-12 pt-6 flex items-center justify-between">
+          <p className="text-xs text-slate-500">
+            &copy; {year} PulsarFlow. All rights reserved.
+          </p>
+          <button
+            onClick={scrollToTop}
+            className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+            aria-label="Back to top"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </footer>
@@ -308,7 +492,7 @@ function LandingPageContent() {
       .catch(() => setCategories([]));
   }, [isClient]);
 
-  // Fetch events, re-fetch when selectedCategoryId changes
+  // Fetch events
   useEffect(() => {
     if (!isClient) return;
     setIsLoading(true);
@@ -354,96 +538,166 @@ function LandingPageContent() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
+      {/* 1. Nav */}
       <LandingNav />
 
-      {/* Hero */}
+      {/* 2. Hero */}
       <HeroSection />
 
-      {/* Live stats bar — real data */}
-      {!isLoading && events.length > 0 && <StatsBar stats={stats} />}
+      {/* 3. TrustBar — animated count-up stats + trust badges */}
+      <TrustBar stats={stats} />
 
-      {/* Category filter bar */}
-      {categories.length > 0 && (
-        <section className="bg-white dark:bg-slate-950 px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="max-w-7xl mx-auto">
-            <CategoryFilterBar
-              categories={categories}
-              selectedCategoryId={selectedCategoryId}
-              onSelect={setSelectedCategoryId}
-            />
+      {/* 4. Event Discovery — consolidated category filter + tabs + events */}
+      <section className="bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection className="text-center mb-10">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3">
+              Discover Events
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+              Browse upcoming events near you or explore by category and interest.
+            </p>
+          </AnimatedSection>
+
+          {/* Category filter bar */}
+          {categories.length > 0 && (
+            <div className="mb-6">
+              <CategoryFilterBar
+                categories={categories}
+                selectedCategoryId={selectedCategoryId}
+                onSelect={setSelectedCategoryId}
+              />
+            </div>
+          )}
+
+          {/* Tab filter */}
+          <div className="mb-8">
+            <TabFilter activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
-        </section>
-      )}
 
-      {/* Tab filter */}
-      <section className="bg-white dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-7xl mx-auto">
-          <TabFilter activeTab={activeTab} onTabChange={setActiveTab} />
+          {/* Events display */}
+          <div>
+            {!isClient || isLoading ? (
+              /* Skeleton loading grid */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="animate-pulse rounded-xl overflow-hidden">
+                    <div className="h-48 bg-slate-200 dark:bg-slate-800" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : tabFilteredEvents.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-20 h-20 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5">
+                  <CalendarCheck className="w-10 h-10 text-violet-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+                  No events found
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                  {events.length === 0
+                    ? "We're having trouble loading events. Please check your connection or try again later."
+                    : 'No events match your current filters. Try broadening your search.'}
+                </p>
+                {events.length === 0 && (
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-md shadow-violet-500/20"
+                  >
+                    Try Again
+                  </button>
+                )}
+              </div>
+            ) : (
+              <TrendingSection events={tabFilteredEvents} location={selectedLocation} />
+            )}
+          </div>
+
+          {/* Browse all link */}
+          {tabFilteredEvents.length > 0 && (
+            <div className="text-center mt-10">
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Browse All Events
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Event sections */}
-      <div className="bg-white dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-        <div className="max-w-7xl mx-auto w-full space-y-16">
-          {!isClient || isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600" />
-            </div>
-          ) : tabFilteredEvents.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4">
-                📅
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                No events available
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">
-                {events.length === 0
-                  ? "We're having trouble loading events. Please check your connection or try again later."
-                  : 'No events match your current filters.'}
-              </p>
-              {events.length === 0 && (
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all"
-                >
-                  Try Again
-                </button>
-              )}
-            </div>
-          ) : (
-            <TrendingSection events={tabFilteredEvents} location={selectedLocation} />
-          )}
-
-          <div className="space-y-16">
-            <PriceSection title="Free Events" events={tabFilteredEvents} maxPrice={0} />
-            <PriceSection title="Events Under $25" events={tabFilteredEvents} maxPrice={25} />
-          </div>
-
-          <ThisWeekSection events={tabFilteredEvents} />
+      {/* 5. Featured Calendars */}
+      <section className="bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection>
+            <FeaturedCalendars calendars={mockFeaturedCalendars} />
+          </AnimatedSection>
         </div>
-      </div>
+      </section>
 
-      {/* How it works */}
+      {/* 6. Popular Cities */}
+      <section className="bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection>
+            <PopularCities cities={mockPopularCities} />
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* 7. How It Works */}
       <HowItWorks />
 
-      {/* Category interests */}
-      <div className="bg-white dark:bg-slate-950 px-4 sm:px-6 lg:px-8 pb-12">
-        <div className="max-w-7xl mx-auto">
-          <CategoryInterests />
+      {/* 8. Testimonials / Social Proof */}
+      <section className="bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection>
+            <SocialProofSection
+              testimonials={mockTestimonials}
+              trustMetrics={mockTrustMetrics}
+            />
+          </AnimatedSection>
         </div>
-      </div>
+      </section>
 
-      {/* Trust badges */}
-      <TrustBanner />
-
-      {/* Organizer CTA */}
-      <div className="bg-white dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-16">
-        <div className="max-w-7xl mx-auto">
-          <CreateEventCTA />
+      {/* 9. Category Interests */}
+      <section className="bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                Explore Your Interests
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400">
+                Find events that match your passions
+              </p>
+            </div>
+            <CategoryInterests />
+          </AnimatedSection>
         </div>
-      </div>
+      </section>
 
+      {/* 10. Create Event CTA */}
+      <section className="bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <AnimatedSection>
+            <CreateEventCTA />
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* 11. Newsletter Signup */}
+      <AnimatedSection>
+        <NewsletterSignup />
+      </AnimatedSection>
+
+      {/* 12. Footer */}
       <LandingFooter />
     </div>
   );
