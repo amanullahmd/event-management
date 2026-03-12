@@ -24,7 +24,8 @@ interface OrderResponse {
   id: string;
   eventId: string;
   userId: string;
-  totalAmount: number;
+  totalAmountCents: number;
+  totalAmount?: number;
   status: string;
   createdAt: string;
   items: OrderItemResponse[];
@@ -103,7 +104,7 @@ export default function ModernCustomerDashboard() {
           try {
             const event = await getEventById(eventId);
             if (event) {
-              names[eventId] = event.name || event.title || `Event #${eventId.slice(0, 8)}`;
+              names[eventId] = event.title || event.name || `Event #${eventId.slice(0, 8)}`;
             }
           } catch { /* skip */ }
         })
@@ -125,7 +126,7 @@ export default function ModernCustomerDashboard() {
   // Computed stats from real data
   const totalOrders = orders.length;
   const totalTickets = tickets.length;
-  const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  const totalSpent = orders.reduce((sum, order) => sum + ((order.totalAmountCents || order.totalAmount || 0) / (order.totalAmountCents ? 100 : 1)), 0);
   const upcomingEventsCount = tickets.filter(
     (t) => t.status === 'ACTIVE' || t.status === 'active' || t.status === 'valid'
   ).length;
@@ -433,7 +434,7 @@ export default function ModernCustomerDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency((order.totalAmountCents || order.totalAmount || 0) / (order.totalAmountCents ? 100 : 1))}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

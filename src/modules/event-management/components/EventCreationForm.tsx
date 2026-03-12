@@ -8,6 +8,7 @@ import { EventTypeSelector, type EventType } from './EventTypeSelector';
 import { CategorySelector } from './CategorySelector';
 import { ImageUploadArea } from './ImageUploadArea';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { useToast } from '@/modules/shared-common/components/shared/ToastContainer';
 
 interface CreateEventRequest {
   title: string;
@@ -37,6 +38,7 @@ const EVENT_TYPES = ['ONLINE', 'IN_PERSON', 'HYBRID'];
 
 export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess, onError }) => {
   const router = useRouter();
+  const { addToast } = useToast();
   const [formData, setFormData] = useState<CreateEventRequest>({
     title: '',
     description: '',
@@ -289,12 +291,12 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
     setSuccessMessage('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       if (!token) {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch('/api/events', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'}/api/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +328,8 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
       }
 
       setSuccessMessage('Event created successfully as draft!');
-      
+      addToast('Event created successfully!', 'success', 4000);
+
       if (onSuccess) {
         onSuccess(data.id);
       }
@@ -338,6 +341,7 @@ export const EventCreationForm: React.FC<EventCreationFormProps> = ({ onSuccess,
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create event';
       setErrors({ submit: errorMessage });
+      addToast(errorMessage, 'error', 5000);
       if (onError) {
         onError(errorMessage);
       }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getAllEvents, getAllOrders, type Event, type Order } from '@/modules/shared-common/services/apiService';
+import { getMyEvents, getMyOrders, type Event, type Order } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
 
@@ -28,17 +28,16 @@ export default function OrganizerDashboard() {
 
       try {
         setIsLoading(true);
-        const [allEvents, allOrders] = await Promise.all([
-          getAllEvents(),
-          getAllOrders()
+        const [events, orders] = await Promise.all([
+          getMyEvents(),
+          getMyOrders()
         ]);
-        
-        const events = allEvents.filter((event) => event.organizerId === user.id);
+
         const eventIds = events.map((e) => e.id);
-        const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
-        
+        const filteredOrders = orders.filter((order) => eventIds.includes(order.eventId));
+
         setOrganizerEvents(events);
-        setOrganizerOrders(orders);
+        setOrganizerOrders(filteredOrders);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         setOrganizerEvents([]);
@@ -204,10 +203,10 @@ export default function OrganizerDashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900 dark:text-white">
-                      {event.name}
+                      {event.title || event.name}
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      {formatDate(event.date)} • {event.location}
+                      {formatDate(event.startDate || event.date)} • {event.location}
                     </p>
                     <div className="flex gap-4 mt-3 text-sm">
                       <span className="text-slate-600 dark:text-slate-400">
@@ -215,7 +214,7 @@ export default function OrganizerDashboard() {
                       </span>
                       <span className="text-slate-600 dark:text-slate-400">
                         {formatCurrency(
-                          event.ticketTypes.reduce((sum, tt) => sum + tt.price * tt.sold, 0)
+                          (event.ticketTypes || []).reduce((sum, tt) => sum + tt.price * tt.sold, 0)
                         )}
                       </span>
                     </div>

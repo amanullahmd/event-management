@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks';
 import {
-  getEventsByOrganizerId,
+  getMyEvents,
   getAllRefunds,
   getRefundsByEventId,
   updateRefundStatus,
@@ -36,7 +36,7 @@ export default function RefundsPage() {
         return;
       }
       try {
-        const events = await getEventsByOrganizerId(user.id);
+        const events = await getMyEvents();
         setOrganizerEvents(events);
       } catch (error) {
         console.error('Failed to load events:', error);
@@ -209,7 +209,7 @@ export default function RefundsPage() {
               <option value="">All Events</option>
               {organizerEvents.map((event) => (
                 <option key={event.id} value={event.id}>
-                  {event.name}
+                  {event.title || event.name}
                 </option>
               ))}
             </select>

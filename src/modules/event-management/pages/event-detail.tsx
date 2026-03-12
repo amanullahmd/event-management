@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { TicketSelector } from '@/modules/shared-common/components/public/TicketSelector';
-import { getEventById } from '@/modules/shared-common/services/apiService';
+import { getEventById, getEventTicketTypes } from '@/modules/shared-common/services/apiService';
 import { useCart } from '@/modules/payment-processing/context/CartContext';
 import type { Event, TicketType } from '@/modules/shared-common/services/apiService';
 import { 
@@ -35,8 +35,16 @@ export default function EventDetailsPage() {
     const loadEvent = async () => {
       if (params.id) {
         try {
-          const eventData = await getEventById(params.id as string);
+          const eventId = params.id as string;
+          const [eventData, ticketTypesData] = await Promise.all([
+            getEventById(eventId),
+            getEventTicketTypes(eventId).catch(() => []),
+          ]);
           if (eventData) {
+            // Merge ticket types from separate endpoint into event
+            eventData.ticketTypes = ticketTypesData.length > 0
+              ? ticketTypesData
+              : eventData.ticketTypes || [];
             setEvent(eventData);
           }
         } catch (error) {
@@ -78,15 +86,24 @@ export default function EventDetailsPage() {
     return ticketType.quantity - ticketType.sold;
   };
 
+  const ticketTypes = event?.ticketTypes || [];
+
   const getTotalAvailableTickets = () => {
     if (!event) return 0;
-    return event.ticketTypes.reduce((total, tt) => total + getAvailableTickets(tt), 0);
+    if (ticketTypes.length === 0) return event.capacity || 0;
+    return ticketTypes.reduce((total, tt) => total + getAvailableTickets(tt), 0);
   };
 
   const getLowestPrice = () => {
-    if (!event) return 0;
-    return Math.min(...event.ticketTypes.map((t) => t.price));
+    if (!event || ticketTypes.length === 0) return 0;
+    return Math.min(...ticketTypes.map((t) => t.price));
   };
+
+  // Helper accessors for backend field mapping
+  const eventName = event?.title || event?.name || 'Untitled Event';
+  const eventDate = event?.startDate || event?.date || '';
+  const eventImage = event?.imageUrl || event?.image;
+  const eventCategory = event?.categoryName || event?.category || '';
 
   const cartItemCount = items.reduce((total, item) => total + item.quantity, 0);
 
@@ -140,11 +157,11 @@ export default function EventDetailsPage() {
       {/* Hero Section */}
       <div className="relative">
         <div className="w-full h-72 md:h-96 bg-gradient-to-br from-violet-600 via-fuchsia-500 to-pink-500 relative overflow-hidden">
-          {event.image ? (
+          {eventImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={event.image}
-              alt={event.name}
+              src={eventImage}
+              alt={eventName}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -187,7 +204,7 @@ export default function EventDetailsPage() {
             <div className="max-w-7xl mx-auto">
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm font-medium rounded-full">
-                  {event.category}
+                  {eventCategory || event.eventType || 'Event'}
                 </span>
                 {event.status === 'active' && (
                   <span className="px-3 py-1 bg-green-500/80 backdrop-blur-sm text-white text-sm font-medium rounded-full flex items-center gap-1">
@@ -197,16 +214,16 @@ export default function EventDetailsPage() {
                 )}
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3">
-                {event.name}
+                {eventName}
               </h1>
               <div className="flex flex-wrap items-center gap-4 text-white/90">
                 <span className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  {formatDate(event.date)}
+                  {formatDate(eventDate)}
                 </span>
                 <span className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  {formatTime(event.date)}
+                  {formatTime(eventDate)}
                 </span>
               </div>
             </div>
@@ -232,7 +249,7 @@ export default function EventDetailsPage() {
                 <div className="w-10 h-10 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-xl flex items-center justify-center mx-auto mb-2">
                   <Users className="w-5 h-5 text-fuchsia-600 dark:text-fuchsia-400" />
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{event.totalAttendees}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{event.totalAttendees || 0}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Attendees</p>
               </Card>
               <Card className="p-4 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-center">
@@ -267,12 +284,12 @@ export default function EventDetailsPage() {
               </h2>
               <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
                 <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex flex-col items-center justify-center text-white">
-                  <span className="text-xs font-medium uppercase">{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                  <span className="text-2xl font-bold">{new Date(event.date).getDate()}</span>
+                  <span className="text-xs font-medium uppercase">{new Date(eventDate).toLocaleDateString('en-US', { month: 'short' })}</span>
+                  <span className="text-2xl font-bold">{new Date(eventDate).getDate()}</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{formatDate(event.date)}</p>
-                  <p className="text-gray-600 dark:text-gray-300">{formatTime(event.date)}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{formatDate(eventDate)}</p>
+                  <p className="text-gray-600 dark:text-gray-300">{formatTime(eventDate)}</p>
                 </div>
               </div>
             </Card>
@@ -314,10 +331,17 @@ export default function EventDetailsPage() {
                   {getTotalAvailableTickets()} tickets available
                 </p>
 
-                <TicketSelector
-                  ticketTypes={event.ticketTypes}
-                  onAddToCart={handleAddToCart}
-                />
+                {ticketTypes.length > 0 ? (
+                  <TicketSelector
+                    ticketTypes={ticketTypes}
+                    onAddToCart={handleAddToCart}
+                  />
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Free event — no tickets required</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Capacity: {event.capacity || 'Unlimited'}</p>
+                  </div>
+                )}
               </Card>
 
               {/* Cart Summary */}

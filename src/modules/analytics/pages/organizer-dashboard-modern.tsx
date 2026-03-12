@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getAllEvents, type Event } from '@/modules/shared-common/services/apiService';
+import { getMyEvents, type Event } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
 import { 
@@ -59,11 +59,7 @@ export default function ModernOrganizerDashboard() {
     try {
       setIsLoading(true);
       setError(null);
-      const allEvents = await getAllEvents();
-      
-      // Filter events by the authenticated organizer's ID
-      const events = allEvents.filter((event) => event.organizerId === user.id);
-      
+      const events = await getMyEvents();
       setOrganizerEvents(events);
       setLastRefresh(new Date());
     } catch (err) {
@@ -83,13 +79,13 @@ export default function ModernOrganizerDashboard() {
   const metrics = useMemo((): EventMetrics => {
     const now = new Date();
     const totalEvents = organizerEvents.length;
-    const activeEvents = organizerEvents.filter((e) => e.status === 'active').length;
+    const activeEvents = organizerEvents.filter((e) => ['active', 'published'].includes((e.status || '').toLowerCase())).length;
     const upcomingEvents = organizerEvents.filter((e) => {
-      const eventDate = new Date(e.date);
+      const eventDate = new Date(e.startDate || e.date);
       return eventDate > now;
     }).length;
     const pastEvents = organizerEvents.filter((e) => {
-      const eventDate = new Date(e.date);
+      const eventDate = new Date(e.startDate || e.date);
       return eventDate <= now;
     }).length;
     
@@ -132,9 +128,11 @@ export default function ModernOrganizerDashboard() {
           : 0;
         
         let derivedStatus: 'upcoming' | 'active' | 'completed' = 'upcoming';
-        if (event.status === 'active') derivedStatus = 'active';
-        else if (new Date(event.date) <= now) derivedStatus = 'completed';
-        
+        const normalizedStatus = (event.status || '').toLowerCase();
+        if (normalizedStatus === 'active' || normalizedStatus === 'published') derivedStatus = 'active';
+        else if (normalizedStatus === 'draft') derivedStatus = 'upcoming';
+        else if (new Date(event.startDate || event.date) <= now) derivedStatus = 'completed';
+
         return {
           ...event,
           revenue,
@@ -142,7 +140,7 @@ export default function ModernOrganizerDashboard() {
           derivedStatus,
         };
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => new Date(b.startDate || b.date).getTime() - new Date(a.startDate || a.date).getTime())
       .slice(0, 5);
   }, [organizerEvents]);
 
@@ -429,7 +427,7 @@ export default function ModernOrganizerDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-slate-900 dark:text-white text-lg">
-                        {event.name}
+                        {event.title || event.name}
                       </h3>
                       <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(event.derivedStatus)}`}>
                         {getStatusIcon(event.derivedStatus)}
@@ -440,7 +438,7 @@ export default function ModernOrganizerDashboard() {
                     <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {formatDate(event.date)}
+                        {formatDate(event.startDate || event.date)}
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />

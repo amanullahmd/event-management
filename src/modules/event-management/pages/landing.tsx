@@ -10,7 +10,6 @@ import { CategoryInterests } from '@/modules/shared-common/components/landing/Ca
 import { CreateEventCTA } from '@/modules/shared-common/components/landing/CreateEventCTA';
 import { FeaturedCalendars } from '@/modules/shared-common/components/landing/FeaturedCalendars';
 import { PopularCities } from '@/modules/shared-common/components/landing/PopularCities';
-import { SocialProofSection } from '@/modules/shared-common/components/landing/SocialProofSection';
 import { NewsletterSignup } from '@/modules/shared-common/components/landing/NewsletterSignup';
 import { useEventFilters } from '@/lib/hooks/useEventFilters';
 import { useInView } from '@/lib/hooks/useInView';
@@ -20,12 +19,8 @@ import { apiRequest } from '@/modules/shared-common/utils/api';
 import { CategoryFilterBar } from '@/modules/event-management/components/CategoryFilterBar';
 import { fetchCategories, type Category } from '@/modules/event-management/components/CategorySelector';
 import { PulsarFlowLogo } from '@/modules/shared-common/components/common/PulsarFlowLogo';
-import {
-  mockFeaturedCalendars,
-  mockPopularCities,
-  mockTestimonials,
-  mockTrustMetrics,
-} from '@/lib/mock-landing-data';
+import type { FeaturedCalendar } from '@/modules/shared-common/components/shared/FeaturedCalendarCard';
+import type { City } from '@/modules/shared-common/components/shared/CityCard';
 import type { Event } from '@/lib/types/event';
 import type { ExtendedEvent } from '@/modules/shared-common/components/shared/EventCard';
 import {
@@ -109,6 +104,83 @@ function deriveStats(events: Event[]): PlatformStats {
     totalCategories: categories.size,
     totalOrganizers: organizers.size,
   };
+}
+
+/** US state abbreviations to identify "City, STATE" patterns */
+const US_STATES = new Set(['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']);
+
+/** Extract city name from a location string like "Moscone Center, San Francisco, CA" */
+function extractCity(location: string): string | null {
+  if (!location || location.toLowerCase() === 'online') return null;
+  const parts = location.split(',').map((p) => p.trim());
+  if (parts.length >= 3) {
+    const last = parts[parts.length - 1].toUpperCase();
+    // If last part is a US state abbreviation, city is second-to-last
+    if (US_STATES.has(last)) return parts[parts.length - 2];
+    // Otherwise last part is likely the city (e.g., "WeWork, 11 Park Place, NYC")
+    return parts[parts.length - 1];
+  }
+  if (parts.length === 2) {
+    const last = parts[1].toUpperCase();
+    // "San Francisco, CA" → San Francisco
+    if (US_STATES.has(last)) return parts[0];
+    return parts[0];
+  }
+  return parts[0];
+}
+
+/** Derive popular cities from real event data */
+function deriveCities(events: Event[]): City[] {
+  const cityMap = new Map<string, { count: number; image: string }>();
+  for (const event of events) {
+    const city = extractCity(event.location);
+    if (!city) continue;
+    const existing = cityMap.get(city);
+    if (existing) {
+      existing.count++;
+    } else {
+      cityMap.set(city, { count: 1, image: event.image || '' });
+    }
+  }
+  return Array.from(cityMap.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([name, data]) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+      image: data.image || `https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=500&h=400&fit=crop`,
+      eventCount: data.count,
+    }));
+}
+
+/** Derive featured calendars from real categories + events */
+function deriveCalendars(events: Event[], categories: Category[]): FeaturedCalendar[] {
+  const categoryEventMap = new Map<string, { count: number; image: string }>();
+  for (const event of events) {
+    const cat = event.categoryName || event.category;
+    if (!cat) continue;
+    const img = event.imageUrl || event.image || '';
+    const existing = categoryEventMap.get(cat);
+    if (existing) {
+      existing.count++;
+      if (!existing.image && img) existing.image = img;
+    } else {
+      categoryEventMap.set(cat, { count: 1, image: img });
+    }
+  }
+  return categories
+    .map((cat) => {
+      const data = categoryEventMap.get(cat.name);
+      if (!data || data.count === 0) return null;
+      return {
+        id: cat.id || cat.name.toLowerCase().replace(/\s+/g, '-'),
+        name: `${cat.name} Events`,
+        description: `Discover ${cat.name} events near you`,
+        image: data.image || `https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&h=300&fit=crop`,
+        followerCount: data.count * 100, // derived estimate
+        eventCount: data.count,
+      } as FeaturedCalendar;
+    })
+    .filter((c): c is FeaturedCalendar => c !== null);
 }
 
 /* ------------------------------------------------------------------ */
@@ -218,18 +290,18 @@ function LandingNav() {
 /*  TrustBar — animated count-up stats + trust badges                  */
 /* ------------------------------------------------------------------ */
 
-function TrustBar({ stats }: { stats: PlatformStats }) {
+function TrustBar({ stats, realOrganizers }: { stats: PlatformStats; realOrganizers: number }) {
   const { ref, isInView } = useInView({ threshold: 0.3 });
 
-  const eventsCount = useCountUp(stats.totalEvents > 0 ? stats.totalEvents : 50000, {
+  const eventsCount = useCountUp(stats.totalEvents > 0 ? stats.totalEvents : 0, {
     startWhen: isInView,
     duration: 2000,
   });
-  const organizersCount = useCountUp(mockTrustMetrics.organizers, {
+  const organizersCount = useCountUp(realOrganizers > 0 ? realOrganizers : stats.totalOrganizers, {
     startWhen: isInView,
     duration: 2200,
   });
-  const categoriesCount = useCountUp(stats.totalCategories > 0 ? stats.totalCategories : 25, {
+  const categoriesCount = useCountUp(stats.totalCategories > 0 ? stats.totalCategories : 0, {
     startWhen: isInView,
     duration: 1800,
   });
@@ -481,6 +553,7 @@ function LandingPageContent() {
   const [isClient, setIsClient] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [platformOrganizers, setPlatformOrganizers] = useState(0);
 
   useEffect(() => { setIsClient(true); }, []);
 
@@ -490,6 +563,18 @@ function LandingPageContent() {
     fetchCategories()
       .then(setCategories)
       .catch(() => setCategories([]));
+  }, [isClient]);
+
+  // Fetch platform stats (public endpoint — no auth token needed)
+  useEffect(() => {
+    if (!isClient) return;
+    const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    fetch(`${API_BASE}/api/platform/stats`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.totalOrganizers) setPlatformOrganizers(data.totalOrganizers);
+      })
+      .catch(() => {});
   }, [isClient]);
 
   // Fetch events
@@ -517,6 +602,8 @@ function LandingPageContent() {
   }, [isClient, selectedCategoryId]);
 
   const stats = useMemo(() => deriveStats(events), [events]);
+  const popularCities = useMemo(() => deriveCities(events), [events]);
+  const featuredCalendars = useMemo(() => deriveCalendars(events, categories), [events, categories]);
 
   const { filteredEvents: allEvents } = useEventFilters(events);
   const { filteredEvents: todayEvents } = useEventFilters(events, { dateRange: 'today' });
@@ -545,7 +632,7 @@ function LandingPageContent() {
       <HeroSection />
 
       {/* 3. TrustBar — animated count-up stats + trust badges */}
-      <TrustBar stats={stats} />
+      <TrustBar stats={stats} realOrganizers={platformOrganizers} />
 
       {/* 4. Event Discovery — consolidated category filter + tabs + events */}
       <section className="bg-white dark:bg-slate-950">
@@ -633,40 +720,32 @@ function LandingPageContent() {
         </div>
       </section>
 
-      {/* 5. Featured Calendars */}
-      <section className="bg-slate-50/50 dark:bg-slate-900/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <AnimatedSection>
-            <FeaturedCalendars calendars={mockFeaturedCalendars} />
-          </AnimatedSection>
-        </div>
-      </section>
+      {/* 5. Featured Calendars (from real categories) */}
+      {featuredCalendars.length > 0 && (
+        <section className="bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+            <AnimatedSection>
+              <FeaturedCalendars calendars={featuredCalendars} />
+            </AnimatedSection>
+          </div>
+        </section>
+      )}
 
-      {/* 6. Popular Cities */}
-      <section className="bg-white dark:bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <AnimatedSection>
-            <PopularCities cities={mockPopularCities} />
-          </AnimatedSection>
-        </div>
-      </section>
+      {/* 6. Popular Cities (derived from real event locations) */}
+      {popularCities.length >= 2 && (
+        <section className="bg-white dark:bg-slate-950">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+            <AnimatedSection>
+              <PopularCities cities={popularCities} />
+            </AnimatedSection>
+          </div>
+        </section>
+      )}
 
       {/* 7. How It Works */}
       <HowItWorks />
 
-      {/* 8. Testimonials / Social Proof */}
-      <section className="bg-white dark:bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <AnimatedSection>
-            <SocialProofSection
-              testimonials={mockTestimonials}
-              trustMetrics={mockTrustMetrics}
-            />
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* 9. Category Interests */}
+      {/* 8. Category Interests */}
       <section className="bg-slate-50/50 dark:bg-slate-900/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <AnimatedSection>

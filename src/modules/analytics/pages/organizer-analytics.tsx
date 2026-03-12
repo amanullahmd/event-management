@@ -4,10 +4,10 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
-  getAllEvents,
-  getAllOrders,
+  getMyEvents,
+  getMyOrders,
   type Event,
-  type AdminOrder,
+  type Order,
 } from '@/modules/shared-common/services/apiService';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Button } from '@/modules/shared-common/components/ui/button';
@@ -29,7 +29,7 @@ export default function OrganizerAnalyticsPage() {
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
-  const [organizerOrders, setOrganizerOrders] = useState<AdminOrder[]>([]);
+  const [organizerOrders, setOrganizerOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,17 +42,17 @@ export default function OrganizerAnalyticsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [allEvents, allOrders] = await Promise.all([
-        getAllEvents(),
-        getAllOrders(),
+      const [events, orders] = await Promise.all([
+        getMyEvents(),
+        getMyOrders(),
       ]);
 
-      const events = allEvents.filter((event) => event.organizerId === user.id);
       setOrganizerEvents(events);
 
+      // Filter orders to only those for this organizer's events
       const eventIds = events.map((e) => e.id);
-      const orders = allOrders.filter((order) => eventIds.includes(order.eventId));
-      setOrganizerOrders(orders);
+      const filteredOrders = orders.filter((order) => eventIds.includes(order.eventId));
+      setOrganizerOrders(filteredOrders);
     } catch (err) {
       console.error('Failed to fetch analytics data:', err);
       setError('Failed to load analytics data');
@@ -106,10 +106,10 @@ export default function OrganizerAnalyticsPage() {
         );
         return {
           id: event.id,
-          name: event.name,
+          name: event.title || event.name,
           revenue: eventRevenue,
           ticketsSold,
-          date: event.date,
+          date: event.startDate || event.date,
           status: event.status,
         };
       })
@@ -190,7 +190,7 @@ export default function OrganizerAnalyticsPage() {
       'Status',
     ];
     const rows = analytics.revenueByEvent.map((event) => [
-      `"${event.name}"`,
+      `"${event.name || ''}"`,
       event.revenue.toFixed(2),
       event.ticketsSold.toString(),
       formatDate(event.date),

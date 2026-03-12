@@ -110,8 +110,11 @@ export interface Ticket {
   eventId: string;
   ticketTypeId: string;
   ticketTypeName?: string;
+  ticketNumber?: string;
   eventTitle?: string;
+  attendeeName?: string;
   qrCode: string;
+  qrCodeData?: string;
   checkedIn: boolean;
   checkedInAt?: string;
   status: string;
@@ -177,6 +180,12 @@ export async function getEventById(id: string): Promise<Event | undefined> {
 
 export async function getEventsByOrganizerId(organizerId: string): Promise<Event[]> {
   return apiRequest(`/admin/organizers/${organizerId}/events`);
+}
+
+/** Organizer: get own events (all statuses, backend uses JWT to identify organizer) */
+export async function getMyEvents(): Promise<Event[]> {
+  const data = await apiRequest('/events/my-events');
+  return unwrapPageResponse<Event>(data);
 }
 
 export async function createEvent(event: Partial<Event>): Promise<Event> {
@@ -248,6 +257,22 @@ export async function getTicketsByEventId(eventId: string): Promise<Ticket[]> {
   return apiRequest(`/tickets/event/${eventId}`);
 }
 
+/** Public: get ticket types for an event (no auth required) */
+export async function getEventTicketTypes(eventId: string): Promise<TicketType[]> {
+  const data = await apiRequest(`/events/${eventId}/ticket-types`);
+  if (!Array.isArray(data)) return [];
+  // Map backend TicketTypeResponse fields to frontend TicketType interface
+  return data.map((tt: Record<string, unknown>) => ({
+    id: tt.id as string,
+    eventId: tt.eventId as string,
+    name: tt.name as string,
+    price: (tt.price as number) || 0,
+    quantity: (tt.quantityLimit as number) || (tt.quantity as number) || 0,
+    sold: (tt.quantitySold as number) || (tt.sold as number) || 0,
+    type: (tt.category as string) || (tt.type as string) || 'GENERAL',
+  }));
+}
+
 export async function updateTicketCheckIn(ticketId: string, checkedIn: boolean): Promise<Ticket> {
   return apiRequest(`/tickets/${ticketId}/checkin`, {
     method: 'PUT',
@@ -256,7 +281,11 @@ export async function updateTicketCheckIn(ticketId: string, checkedIn: boolean):
 }
 
 export async function getTicketByQrCode(qrCode: string): Promise<Ticket | undefined> {
-  return apiRequest(`/tickets/qr/${qrCode}`);
+  return apiRequest(`/tickets/qr/${encodeURIComponent(qrCode)}`);
+}
+
+export async function getTicketByNumber(ticketNumber: string): Promise<Ticket | undefined> {
+  return apiRequest(`/tickets/number/${encodeURIComponent(ticketNumber)}`);
 }
 
 // ─── Dashboard Metrics (Admin) ──────────────────────────────────────────────

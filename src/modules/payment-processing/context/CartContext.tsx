@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { TicketType } from '@/modules/shared-common/services/apiService';
 
 /**
@@ -33,7 +33,20 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
  * CartProvider component that wraps the application with cart context
  */
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem('cart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Persist cart to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('cart_items', JSON.stringify(items));
+    } catch { /* ignore */ }
+  }, [items]);
 
   const addItem = (ticketType: TicketType, eventId: string, quantity: number) => {
     setItems((prevItems) => {
@@ -84,6 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setItems([]);
+    try { localStorage.removeItem('cart_items'); } catch { /* ignore */ }
   };
 
   const getSubtotal = () => {

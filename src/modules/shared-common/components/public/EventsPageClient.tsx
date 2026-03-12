@@ -31,16 +31,28 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [likedEvents, setLikedEvents] = useState<Set<string>>(new Set());
 
+  // Helper to safely get display fields from backend response
+  const getEventName = (event: Event) => event.title || event.name || 'Untitled Event';
+  const getEventDate = (event: Event) => event.startDate || event.date;
+  const getEventCategory = (event: Event) => event.categoryName || event.category || '';
+  const getEventImage = (event: Event) => event.imageUrl || event.image;
+  const getEventPrice = (event: Event) => {
+    if (event.ticketTypes && event.ticketTypes.length > 0) {
+      return Math.min(...event.ticketTypes.map((t) => t.price));
+    }
+    return 0;
+  };
+
   const filteredEvents = useMemo(() => {
     return initialEvents.filter((event) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesSearch = (event.name ?? '').toLowerCase().includes(query) || (event.description ?? '').toLowerCase().includes(query) || (event.category ?? '').toLowerCase().includes(query) || (event.location ?? '').toLowerCase().includes(query);
+        const matchesSearch = (getEventName(event)).toLowerCase().includes(query) || (event.description ?? '').toLowerCase().includes(query) || (getEventCategory(event)).toLowerCase().includes(query) || (event.location ?? '').toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
-      if (selectedCategory !== 'All' && event.category !== selectedCategory) return false;
+      if (selectedCategory !== 'All' && getEventCategory(event) !== selectedCategory) return false;
       if (selectedDate) {
-        const eventDate = new Date(event.date);
+        const eventDate = new Date(getEventDate(event));
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         switch (selectedDate) {
@@ -66,7 +78,7 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
   const toggleLike = (eventId: string) => { setLikedEvents(prev => { const newSet = new Set(prev); if (newSet.has(eventId)) newSet.delete(eventId); else newSet.add(eventId); return newSet; }); };
   const formatDate = useCallback((date: Date | string) => new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), []);
   const formatTime = useCallback((date: Date | string) => new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }), []);
-  const getAvailableTickets = useCallback((event: Event) => event.ticketTypes.reduce((total, tt) => total + (tt.quantity - tt.sold), 0), []);
+  const getAvailableTickets = useCallback((event: Event) => (event.ticketTypes || []).reduce((total, tt) => total + (tt.quantity - tt.sold), 0), []);
   const hasActiveFilters = searchQuery || selectedCategory !== 'All' || selectedDate;
 
   return (
@@ -122,11 +134,11 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
               <Link key={event.id} href={`/events/${event.id}`} className="group block">
                 <Card className="overflow-hidden bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:shadow-lg transition-all hover:-translate-y-1 h-full">
                   <div className="h-44 bg-gradient-to-br from-violet-500 to-fuchsia-500 relative">
-                    {event.image ? (
+                    {getEventImage(event) ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={event.image}
-                        alt={event.name}
+                        src={getEventImage(event)!}
+                        alt={getEventName(event)}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -135,13 +147,13 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
                       </div>
                     )}
                     <button onClick={(e) => { e.preventDefault(); toggleLike(event.id); }} className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${likedEvents.has(event.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:bg-white'}`}><Heart className={`w-4 h-4 ${likedEvents.has(event.id) ? 'fill-current' : ''}`} /></button>
-                    <div className="absolute bottom-3 left-3"><div className="bg-white dark:bg-slate-900 rounded-lg px-3 py-1.5 shadow-lg"><p className="text-xs font-semibold text-violet-600 dark:text-violet-400">{formatDate(event.date)}</p></div></div>
+                    <div className="absolute bottom-3 left-3"><div className="bg-white dark:bg-slate-900 rounded-lg px-3 py-1.5 shadow-lg"><p className="text-xs font-semibold text-violet-600 dark:text-violet-400">{formatDate(getEventDate(event))}</p></div></div>
                   </div>
                   <div className="p-4">
-                    <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{event.category}</span>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{event.name}</h3>
-                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3"><MapPin className="w-4 h-4 mr-1.5 flex-shrink-0" /><span className="truncate">{event.location.split(',')[0]}</span></div>
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-700"><span className="font-semibold text-gray-900 dark:text-white">${Math.min(...event.ticketTypes.map((t) => t.price))}</span><span className="text-xs text-gray-500 dark:text-gray-400 flex items-center"><Users className="w-3.5 h-3.5 mr-1" />{getAvailableTickets(event)} left</span></div>
+                    <span className="text-xs font-medium text-violet-600 dark:text-violet-400">{getEventCategory(event)}</span>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{getEventName(event)}</h3>
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3"><MapPin className="w-4 h-4 mr-1.5 flex-shrink-0" /><span className="truncate">{(event.location || '').split(',')[0]}</span></div>
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-700"><span className="font-semibold text-gray-900 dark:text-white">{getEventPrice(event) === 0 ? 'Free' : `$${getEventPrice(event)}`}</span><span className="text-xs text-gray-500 dark:text-gray-400 flex items-center"><Users className="w-3.5 h-3.5 mr-1" />{event.capacity || getAvailableTickets(event)} left</span></div>
                   </div>
                 </Card>
               </Link>
@@ -153,17 +165,17 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
               <Link key={event.id} href={`/events/${event.id}`} className="group block">
                 <div className="flex gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-600 hover:shadow-md transition-all">
                   <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-                    {event.image ? (
+                    {getEventImage(event) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                      <img src={getEventImage(event)!} alt={getEventName(event)} className="w-full h-full object-cover" />
                     ) : (
                       <Calendar className="w-7 h-7 text-white/70" aria-label="Event image placeholder" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0"><span className="text-xs font-medium text-violet-600 dark:text-violet-400">{event.category}</span><h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors truncate">{event.name}</h3><div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400"><span className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{formatTime(event.date)}</span><span className="flex items-center truncate"><MapPin className="w-4 h-4 mr-1 flex-shrink-0" />{event.location.split(',')[0]}</span></div></div>
-                      <div className="flex items-center gap-3"><div className="text-right"><p className="font-semibold text-gray-900 dark:text-white">From ${Math.min(...event.ticketTypes.map((t) => t.price))}</p><p className="text-xs text-gray-500 dark:text-gray-400">{getAvailableTickets(event)} tickets left</p></div><button onClick={(e) => { e.preventDefault(); toggleLike(event.id); }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${likedEvents.has(event.id) ? 'bg-red-100 dark:bg-red-900/30 text-red-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 hover:text-red-500'}`}><Heart className={`w-5 h-5 ${likedEvents.has(event.id) ? 'fill-current' : ''}`} /></button></div>
+                      <div className="min-w-0"><span className="text-xs font-medium text-violet-600 dark:text-violet-400">{getEventCategory(event)}</span><h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors truncate">{getEventName(event)}</h3><div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400"><span className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{formatTime(getEventDate(event))}</span><span className="flex items-center truncate"><MapPin className="w-4 h-4 mr-1 flex-shrink-0" />{(event.location || '').split(',')[0]}</span></div></div>
+                      <div className="flex items-center gap-3"><div className="text-right"><p className="font-semibold text-gray-900 dark:text-white">{getEventPrice(event) === 0 ? 'Free' : `From $${getEventPrice(event)}`}</p><p className="text-xs text-gray-500 dark:text-gray-400">{event.capacity || getAvailableTickets(event)} tickets left</p></div><button onClick={(e) => { e.preventDefault(); toggleLike(event.id); }} className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${likedEvents.has(event.id) ? 'bg-red-100 dark:bg-red-900/30 text-red-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 hover:text-red-500'}`}><Heart className={`w-5 h-5 ${likedEvents.has(event.id) ? 'fill-current' : ''}`} /></button></div>
                     </div>
                   </div>
                 </div>

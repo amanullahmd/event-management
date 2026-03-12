@@ -2,18 +2,19 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks';
-import { 
-  getEventsByOrganizerId, 
-  updateTicketCheckIn, 
+import {
+  getMyEvents,
+  updateTicketCheckIn,
   getTicketsByEventId,
   getEventById,
-  getUserById
+  getUserById,
+  getTicketByQrCode,
+  getTicketByNumber
 } from '@/modules/shared-common/services/apiService';
-import { getTicketByQrCode } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Input } from '@/modules/shared-common/components/ui/input';
 
-type Event = Awaited<ReturnType<typeof getEventsByOrganizerId>>[number];
+type Event = Awaited<ReturnType<typeof getMyEvents>>[number];
 type Ticket = Awaited<ReturnType<typeof getTicketsByEventId>>[number];
 
 interface CheckInResult {
@@ -22,16 +23,14 @@ interface CheckInResult {
   ticket?: Ticket;
   event?: Event;
   attendeeName?: string;
+  ticketNumber?: string;
 }
 
-/**
- * QR Code Check-in Page for Organizers
- * Allows organizers to scan QR codes and check in attendees
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
- */
+type CheckInMode = 'qr' | 'ticket';
+
 export default function CheckinPage() {
   const { user } = useAuth();
-  const [qrInput, setQrInput] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [checkInResult, setCheckInResult] = useState<CheckInResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,8 +38,8 @@ export default function CheckinPage() {
   const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
   const [checkInStats, setCheckInStats] = useState({ total: 0, checkedIn: 0, percentage: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [mode, setMode] = useState<CheckInMode>('qr');
 
-  // Fetch organizer's events
   useEffect(() => {
     const fetchEvents = async () => {
       if (!user) {
@@ -50,7 +49,7 @@ export default function CheckinPage() {
 
       setIsLoading(true);
       try {
-        const events = await getEventsByOrganizerId(user.id);
+        const events = await getMyEvents();
         setOrganizerEvents(events.filter(e => ['active', 'ACTIVE', 'published', 'PUBLISHED'].includes(e.status)));
       } catch (error) {
         console.error('Failed to fetch events:', error);
@@ -62,19 +61,18 @@ export default function CheckinPage() {
     fetchEvents();
   }, [user]);
 
-  // Fetch check-in statistics for selected event
   useEffect(() => {
     const fetchStats = async () => {
       if (!selectedEventId) {
         setCheckInStats({ total: 0, checkedIn: 0, percentage: 0 });
         return;
       }
-      
+
       try {
         const tickets = await getTicketsByEventId(selectedEventId);
         const checkedIn = tickets.filter(t => t.checkedIn).length;
         const total = tickets.length;
-        
+
         setCheckInStats({
           total,
           checkedIn,
@@ -88,12 +86,13 @@ export default function CheckinPage() {
     fetchStats();
   }, [selectedEventId]);
 
-  // Handle QR code scan
   const handleCheckIn = useCallback(async () => {
-    if (!qrInput.trim() || !selectedEventId) {
+    if (!inputValue.trim() || !selectedEventId) {
       setCheckInResult({
         success: false,
-        message: 'Please select an event and enter a QR code',
+        message: mode === 'qr'
+          ? 'Please select an event and enter a QR code'
+          : 'Please select an event and enter a ticket number',
       });
       return;
     }
@@ -101,12 +100,20 @@ export default function CheckinPage() {
     setIsProcessing(true);
 
     try {
-      const ticket = await getTicketByQrCode(qrInput);
-      
+      let ticket: Ticket | undefined;
+
+      if (mode === 'qr') {
+        ticket = await getTicketByQrCode(inputValue);
+      } else {
+        ticket = await getTicketByNumber(inputValue.trim().toUpperCase());
+      }
+
       if (!ticket) {
         setCheckInResult({
           success: false,
-          message: 'Invalid QR code. Ticket not found.',
+          message: mode === 'qr'
+            ? 'Invalid QR code. Ticket not found.'
+            : 'Ticket number not found. Please check and try again.',
         });
         setIsProcessing(false);
         return;
@@ -115,7 +122,7 @@ export default function CheckinPage() {
       if (ticket.checkedIn) {
         setCheckInResult({
           success: false,
-          message: 'This ticket has already been checked in.',
+          message: `This ticket has already been checked in.${ticket.ticketNumber ? ' (' + ticket.ticketNumber + ')' : ''}`,
         });
         setIsProcessing(false);
         return;
@@ -123,22 +130,29 @@ export default function CheckinPage() {
 
       await updateTicketCheckIn(ticket.id, true);
 
-      const [event, ticketUser] = await Promise.all([
-        getEventById(ticket.eventId),
-        getUserById(ticket.id)
-      ]);
+      const event = await getEventById(ticket.eventId);
 
       const result: CheckInResult = {
         success: true,
         message: 'Check-in successful!',
         ticket,
         event,
-        attendeeName: ticketUser?.name || 'Guest',
+        attendeeName: ticket.attendeeName || 'Guest',
+        ticketNumber: ticket.ticketNumber,
       };
 
       setCheckInResult(result);
       setRecentCheckIns(prev => [result, ...prev].slice(0, 10));
-      setQrInput('');
+      setInputValue('');
+
+      // Refresh stats
+      const tickets = await getTicketsByEventId(selectedEventId);
+      const checkedInCount = tickets.filter(t => t.checkedIn).length;
+      setCheckInStats({
+        total: tickets.length,
+        checkedIn: checkedInCount,
+        percentage: tickets.length > 0 ? Math.round((checkedInCount / tickets.length) * 100) : 0,
+      });
     } catch (error) {
       setCheckInResult({
         success: false,
@@ -147,24 +161,29 @@ export default function CheckinPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [qrInput, selectedEventId]);
+  }, [inputValue, selectedEventId, mode]);
 
-  // Handle Enter key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleCheckIn();
     }
   }, [handleCheckIn]);
 
+  const switchMode = (newMode: CheckInMode) => {
+    setMode(newMode);
+    setInputValue('');
+    setCheckInResult(null);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            QR Code Check-in
+            Attendee Check-in
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Scan attendee QR codes to check them in
+            Check in attendees via QR code scan or ticket number
           </p>
         </div>
 
@@ -180,7 +199,7 @@ export default function CheckinPage() {
             <option value="">Choose an event...</option>
             {organizerEvents.map((event) => (
               <option key={event.id} value={event.id}>
-                {event.name}
+                {event.title || event.name}
               </option>
             ))}
           </select>
@@ -209,17 +228,43 @@ export default function CheckinPage() {
           </div>
         )}
 
+        {/* Mode Toggle */}
         <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-4 w-fit">
+            <button
+              type="button"
+              onClick={() => switchMode('qr')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                mode === 'qr'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              QR Code
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('ticket')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                mode === 'ticket'
+                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Ticket Number
+            </button>
+          </div>
+
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Scan QR Code
+            {mode === 'qr' ? 'Scan QR Code' : 'Enter Ticket Number'}
           </label>
           <div className="flex gap-2">
             <Input
               type="text"
-              value={qrInput}
-              onChange={(e) => setQrInput(e.target.value)}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Scan QR code here..."
+              placeholder={mode === 'qr' ? 'Scan QR code here...' : 'e.g. PF-20260312-0001'}
               disabled={!selectedEventId || isProcessing}
               autoFocus
             />
@@ -249,10 +294,19 @@ export default function CheckinPage() {
             >
               {checkInResult.message}
             </p>
-            {checkInResult.success && checkInResult.attendeeName && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                Attendee: {checkInResult.attendeeName}
-              </p>
+            {checkInResult.success && (
+              <div className="mt-2 space-y-1">
+                {checkInResult.attendeeName && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Attendee: {checkInResult.attendeeName}
+                  </p>
+                )}
+                {checkInResult.ticketNumber && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Ticket: {checkInResult.ticketNumber}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -273,7 +327,12 @@ export default function CheckinPage() {
                       {checkIn.attendeeName}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {checkIn.event?.name}
+                      {checkIn.event?.title || checkIn.event?.name}
+                      {checkIn.ticketNumber && (
+                        <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                          {checkIn.ticketNumber}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <span
@@ -283,7 +342,7 @@ export default function CheckinPage() {
                         : 'text-red-600 dark:text-red-400'
                     }`}
                   >
-                    {checkIn.success ? '✓ Checked In' : '✗ Failed'}
+                    {checkIn.success ? 'Checked In' : 'Failed'}
                   </span>
                 </div>
               ))}
@@ -294,4 +353,3 @@ export default function CheckinPage() {
     </div>
   );
 }
-

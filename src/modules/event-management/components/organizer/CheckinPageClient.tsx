@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/hooks';
 import { 
-  getEventsByOrganizerId, 
+  getMyEvents,
   updateTicketCheckIn, 
   getTicketsByEventId,
   getTicketByQrCode,
@@ -47,7 +47,7 @@ export default function CheckinPageClient() {
         return;
       }
       try {
-        const events = await getEventsByOrganizerId(user.id);
+        const events = await getMyEvents();
         const activeEvents = events.filter((e: any) => e.status === 'active');
         setOrganizerEvents(activeEvents);
       } catch (error) {

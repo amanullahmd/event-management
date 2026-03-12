@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks';
-import { getEventsByOrganizerId } from '@/modules/shared-common/services/apiService';
+import { getMyEvents } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
 import type { TicketType } from '@/lib/types';
@@ -32,7 +32,7 @@ export default function TicketManagementPage() {
         return;
       }
       try {
-        const events = await getEventsByOrganizerId(user.id);
+        const events = await getMyEvents();
         setOrganizerEvents(events);
       } catch (error) {
         console.error('Failed to load events:', error);
@@ -50,7 +50,7 @@ export default function TicketManagementPage() {
       const event = organizerEvents.find((e) => e.id === selectedEventId);
       const types = (event?.ticketTypes || []).map((tt: any) => ({
         ...tt,
-        eventName: event?.name || '',
+        eventName: event?.title || event?.name || '',
         eventId: event?.id || '',
       })) as TicketTypeWithEvent[];
       setTicketTypes(types);
@@ -59,7 +59,7 @@ export default function TicketManagementPage() {
       const types = organizerEvents.flatMap((event) =>
         (event.ticketTypes || []).map((tt: any) => ({
           ...tt,
-          eventName: event.name,
+          eventName: event.title || event.name,
           eventId: event.id,
         }))
       ) as TicketTypeWithEvent[];
@@ -170,7 +170,7 @@ export default function TicketManagementPage() {
               <option value="">All Events</option>
               {organizerEvents.map((event) => (
                 <option key={event.id} value={event.id}>
-                  {event.name}
+                  {event.title || event.name}
                 </option>
               ))}
             </select>

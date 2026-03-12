@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getAllOrders, type AdminOrder, type Event } from '@/modules/shared-common/services/apiService';
+import { getEventById, getMyOrders, type Order, type Event } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 
 /**
@@ -13,7 +13,7 @@ export default function EventAnalyticsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('all');
-  const [allOrders, setAllOrders] = useState<AdminOrder[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,7 +24,7 @@ export default function EventAnalyticsPage() {
         setIsLoading(true);
         const [eventData, orders] = await Promise.all([
           getEventById(eventId),
-          getAllOrders()
+          getMyOrders()
         ]);
         setEvent(eventData || null);
         setAllOrders(orders);
@@ -50,7 +50,7 @@ export default function EventAnalyticsPage() {
   const analytics = useMemo(() => {
     if (!event) return null;
 
-    const ticketTypeStats = event.ticketTypes.map((tt) => ({
+    const ticketTypeStats = (event.ticketTypes || []).map((tt) => ({
       name: tt.name,
       price: tt.price,
       quantity: tt.quantity,
@@ -59,9 +59,9 @@ export default function EventAnalyticsPage() {
       available: tt.quantity - tt.sold,
     }));
 
-    const totalTickets = event.ticketTypes.reduce((sum, tt) => sum + tt.quantity, 0);
-    const totalSold = event.ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
-    const totalRevenue = event.ticketTypes.reduce((sum, tt) => sum + tt.price * tt.sold, 0);
+    const totalTickets = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.quantity, 0);
+    const totalSold = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.sold, 0);
+    const totalRevenue = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.price * tt.sold, 0);
     const avgTicketPrice = totalSold > 0 ? totalRevenue / totalSold : 0;
 
     return {
@@ -102,7 +102,7 @@ export default function EventAnalyticsPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${event.name}-attendees.csv`;
+    a.download = `${event.title || event.name}-attendees.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -129,7 +129,7 @@ export default function EventAnalyticsPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Analytics: {event.name}
+            Analytics: {event.title || event.name}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2">
             Sales and attendance insights

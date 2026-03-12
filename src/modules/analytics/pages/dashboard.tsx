@@ -25,7 +25,9 @@ type AnyTicket = {
 type AnyEvent = {
   id: string;
   name: string;
+  title?: string;
   date: string | Date;
+  startDate?: string | Date;
   location: string;
 };
 
@@ -70,7 +72,8 @@ export default function CustomerDashboardPage() {
         const orderEvents = await Promise.all(orderEventIds.map((id) => getEventById(id)));
         const nameMap: Record<string, string> = {};
         orderEventIds.forEach((id, i) => {
-          nameMap[id] = (orderEvents[i] as AnyEvent | undefined)?.name || 'Unknown Event';
+          const ev = orderEvents[i] as AnyEvent | undefined;
+          nameMap[id] = ev?.title || ev?.name || 'Unknown Event';
         });
         setOrderEventNames(nameMap);
 
@@ -84,7 +87,7 @@ export default function CustomerDashboardPage() {
 
         uniqueTicketEventIds.forEach((id, i) => {
           const event = ticketEvents[i] as AnyEvent | undefined;
-          if (event && new Date(event.date) > now) {
+          if (event && new Date(event.startDate || event.date) > now) {
             const eventTickets = allTickets.filter((t) => t.eventId === id);
             if (eventTickets.length > 0) {
               ticketsByEvent[id] = eventTickets;
@@ -93,7 +96,7 @@ export default function CustomerDashboardPage() {
           }
         });
 
-        upcomingList.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        upcomingList.sort((a, b) => new Date(a.startDate || a.date).getTime() - new Date(b.startDate || b.date).getTime());
         setUpcomingTicketsByEvent(ticketsByEvent);
         setUpcomingEvents(upcomingList.slice(0, 3));
       } catch (error) {
@@ -185,10 +188,10 @@ export default function CustomerDashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                        {event.name}
+                        {event.title || event.name}
                       </h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {new Date(event.date).toLocaleDateString('en-US', {
+                        {new Date(event.startDate || event.date).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',

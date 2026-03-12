@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getAllOrders, type Event as ApiEvent, type Order } from '@/modules/shared-common/services/apiService';
+import { getEventById, getMyOrders, type Event as ApiEvent, type Order } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
@@ -28,7 +28,7 @@ export default function EventDetailsPage() {
         setIsLoading(true);
         const [eventData, orders] = await Promise.all([
           getEventById(eventId),
-          getAllOrders()
+          getMyOrders()
         ]);
         setEvent(eventData || null);
         setAllOrders(orders);
@@ -63,9 +63,9 @@ export default function EventDetailsPage() {
   const metrics = useMemo(() => {
     if (!event) return null;
 
-    const totalTickets = event.ticketTypes.reduce((sum, tt) => sum + tt.quantity, 0);
-    const totalSold = event.ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
-    const totalRevenue = event.ticketTypes.reduce((sum, tt) => sum + tt.price * tt.sold, 0);
+    const totalTickets = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.quantity, 0);
+    const totalSold = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.sold, 0);
+    const totalRevenue = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.price * tt.sold, 0);
     const availableTickets = totalTickets - totalSold;
 
     return {
@@ -118,10 +118,10 @@ export default function EventDetailsPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            {event.name}
+            {event.title || event.name}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2">
-            {formatDate(event.date)} • {event.location}
+            {formatDate(event.startDate || event.date)} • {event.location}
           </p>
         </div>
         <div className="flex gap-2">
@@ -265,7 +265,7 @@ export default function EventDetailsPage() {
                 <div className="flex justify-between">
                   <dt className="text-slate-600 dark:text-slate-400">Category:</dt>
                   <dd className="text-slate-900 dark:text-white font-medium">
-                    {event.category}
+                    {event.categoryName || event.category}
                   </dd>
                 </div>
                 <div className="flex justify-between">
@@ -308,7 +308,7 @@ export default function EventDetailsPage() {
             </Link>
           </div>
 
-          {event.ticketTypes.length === 0 ? (
+          {(event.ticketTypes || []).length === 0 ? (
             <p className="text-slate-600 dark:text-slate-400 text-center py-8">
               No ticket types yet. Create one to start selling tickets.
             </p>
@@ -341,7 +341,7 @@ export default function EventDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {event.ticketTypes.map((ticketType) => (
+                  {(event.ticketTypes || []).map((ticketType) => (
                     <tr
                       key={ticketType.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"

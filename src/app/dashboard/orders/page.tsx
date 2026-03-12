@@ -52,7 +52,7 @@ export default function CustomerOrdersPage() {
             const event = await getEventById(order.eventId);
             return {
               ...order,
-              eventName: event?.name || event?.title || 'Unknown Event',
+              eventName: event?.title || event?.name || 'Unknown Event',
               eventDate: event?.startDate || (event?.date ? String(event.date) : undefined),
               eventLocation: event?.location,
               ticketCount: order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || order.tickets?.length || 0,
@@ -260,7 +260,7 @@ export default function CustomerOrdersPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xl font-bold text-slate-900 dark:text-white">
-                      {formatCurrency(order.totalAmount || 0)}
+                      {formatCurrency((order.totalAmountCents || order.totalAmount || 0) / (order.totalAmountCents ? 100 : 1))}
                     </p>
                   </div>
                 </div>

@@ -4,9 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import {
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -34,14 +32,8 @@ interface SidebarProps {
 export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const pathname = usePathname();
-
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
 
   const isActiveLink = (href: string) => {
     if (href === '/admin' || href === '/organizer' || href === '/dashboard') {
@@ -164,45 +156,6 @@ export function Sidebar({ links, title = 'Menu' }: SidebarProps) {
             })}
           </nav>
 
-          {/* User info and logout */}
-          <div className="border-t border-slate-200 dark:border-slate-800 p-3 space-y-3">
-            {!isCollapsed && (
-              <div className="px-3 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-semibold text-sm">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-violet-600 dark:text-violet-400 capitalize">
-                      {user?.role}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {isCollapsed && (
-              <div className="flex justify-center">
-                <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-              title={isCollapsed ? 'Logout' : undefined}
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span>Sign Out</span>}
-            </button>
-          </div>
         </div>
       </aside>
     </>

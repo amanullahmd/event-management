@@ -11,6 +11,7 @@ interface TicketCardProps {
     checkedIn: boolean;
     checkedInAt?: string | Date;
     ticketTypeId: string;
+    ticketNumber?: string;
     status?: string;
   };
   event: {
@@ -375,11 +376,27 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
           </div>
         </div>
 
-        {/* Ticket ID */}
-        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            Ticket ID: {ticket.id}
-          </p>
+        {/* Ticket Number */}
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            {ticket.ticketNumber && (
+              <p className="text-sm font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                {ticket.ticketNumber}
+              </p>
+            )}
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              ID: {ticket.id.substring(0, 8)}...
+            </p>
+          </div>
+          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+            ticket.status === 'CHECKED_IN'
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : ticket.status === 'ISSUED'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+          }`}>
+            {ticket.status}
+          </span>
         </div>
       </div>
 

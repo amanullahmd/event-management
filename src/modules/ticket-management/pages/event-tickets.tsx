@@ -74,6 +74,7 @@ export default function CreateTicketTypePage() {
         type: typeMap[data.category] || 'regular',
       };
 
+      if (!event.ticketTypes) event.ticketTypes = [];
       event.ticketTypes.push(newTicketType);
 
       // Redirect to event details
@@ -109,7 +110,7 @@ export default function CreateTicketTypePage() {
           Add Ticket Type
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mt-2">
-          Create a new ticket type for <strong>{event.name}</strong>
+          Create a new ticket type for <strong>{event.title || event.name}</strong>
         </p>
       </div>
 

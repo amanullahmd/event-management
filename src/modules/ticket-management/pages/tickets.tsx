@@ -44,7 +44,7 @@ export default function TicketsPage() {
         const enriched = await Promise.all(
           tickets.map(async (ticket) => {
             const event = await getEventById(ticket.eventId);
-            const ticketType = event?.ticketTypes.find((tt) => tt.id === ticket.ticketTypeId);
+            const ticketType = (event?.ticketTypes || []).find((tt) => tt.id === ticket.ticketTypeId);
             return {
               ticket,
               event,
@@ -68,7 +68,7 @@ export default function TicketsPage() {
   // Filter tickets based on selection
   const filteredTickets = enrichedTickets.filter(({ event }) => {
     if (!event) return false;
-    const eventDate = new Date(event.date);
+    const eventDate = new Date(event.startDate || event.date);
     
     switch (filter) {
       case 'upcoming':
@@ -82,8 +82,8 @@ export default function TicketsPage() {
   
   // Sort by event date (upcoming first, then past)
   const sortedTickets = [...filteredTickets].sort((a, b) => {
-    const dateA = new Date(a.event!.date).getTime();
-    const dateB = new Date(b.event!.date).getTime();
+    const dateA = new Date(a.event!.startDate || a.event!.date).getTime();
+    const dateB = new Date(b.event!.startDate || b.event!.date).getTime();
     
     // Upcoming events first (ascending), then past events (descending)
     if (dateA > now.getTime() && dateB > now.getTime()) {
@@ -96,11 +96,11 @@ export default function TicketsPage() {
   });
 
   const upcomingCount = enrichedTickets.filter(({ event }) => 
-    event && new Date(event.date) > now
+    event && new Date(event.startDate || event.date) > now
   ).length;
-  
-  const pastCount = enrichedTickets.filter(({ event }) => 
-    event && new Date(event.date) <= now
+
+  const pastCount = enrichedTickets.filter(({ event }) =>
+    event && new Date(event.startDate || event.date) <= now
   ).length;
 
   if (isLoading) {

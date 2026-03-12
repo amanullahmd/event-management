@@ -12,7 +12,10 @@ export default async function EventsPage() {
   try {
     const fetched = await getAllEvents();
     allEvents = (Array.isArray(fetched) ? fetched : []).filter(
-      (e) => e.status === 'active' || e.status === 'published'
+      (e) => {
+        const status = (e.status || '').toLowerCase();
+        return status === 'active' || status === 'published';
+      }
     );
   } catch (error) {
     console.error('Failed to fetch events during build:', error);

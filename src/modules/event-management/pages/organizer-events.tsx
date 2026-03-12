@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/modules/shared-common/components/ui/button';
-import { getAllEvents, type Event } from '@/modules/shared-common/services/apiService';
+import { getMyEvents, type Event } from '@/modules/shared-common/services/apiService';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
   Calendar,
@@ -36,8 +36,7 @@ export default function OrganizerEventsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const allEvents = await getAllEvents();
-      const organizerEvents = allEvents.filter(e => e.organizerId === user.id);
+      const organizerEvents = await getMyEvents();
       setEvents(organizerEvents);
     } catch (err) {
       console.error('Failed to fetch events:', err);
@@ -67,9 +66,9 @@ export default function OrganizerEventsPage() {
       const matchesStatus = statusFilter === 'all' || normalizeStatus(event.status) === statusFilter;
       const matchesSearch =
         !searchTerm ||
-        (event.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.title || event.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (event.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (event.category || '').toLowerCase().includes(searchTerm.toLowerCase());
+        (event.categoryName || event.category || '').toLowerCase().includes(searchTerm.toLowerCase());
       return matchesStatus && matchesSearch;
     });
   }, [events, statusFilter, searchTerm]);
@@ -302,7 +301,7 @@ export default function OrganizerEventsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
-                          {event.name}
+                          {event.title || event.name}
                         </h3>
                         <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full shrink-0 ${getStatusBadge(event.status)}`}>
                           {normalizeStatus(event.status).charAt(0).toUpperCase() + normalizeStatus(event.status).slice(1)}
@@ -311,7 +310,7 @@ export default function OrganizerEventsPage() {
                       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                         <span className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-violet-500" />
-                          {formatDate(event.date)}
+                          {formatDate(event.startDate || event.date)}
                         </span>
                         {event.location && (
                           <span className="flex items-center gap-1.5">

@@ -197,8 +197,10 @@ export function EventCard({
 
   const statusBadgeType = getStatusBadgeType(event);
   const organizerName = getOrganizerName(event);
-  const formattedDate = formatEventDate(event.date);
+  const formattedDate = formatEventDate(event.startDate || event.date);
   const formattedPrice = formatPrice(event.ticketTypes);
+  const eventName = event.title || event.name || 'Untitled Event';
+  const eventImage = event.imageUrl || event.image || '/placeholder-event.jpg';
   const hasSocialProof = (event.interestedCount && event.interestedCount > 0) || 
                          (event.goingCount && event.goingCount > 0);
 
@@ -219,8 +221,8 @@ export function EventCard({
         {/* Compact image */}
         <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
           <Image
-            src={event.image || '/placeholder-event.jpg'}
-            alt={event.name}
+            src={eventImage}
+            alt={eventName}
             fill
             loading="lazy"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -230,7 +232,7 @@ export function EventCard({
         {/* Compact details */}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-900 dark:text-slate-50 truncate">
-            {event.name}
+            {eventName}
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
             {formattedDate}
@@ -271,8 +273,8 @@ export function EventCard({
         {/* Image container with hover zoom - Validates: Requirements 5.4 */}
         <div className="relative aspect-[4/3] overflow-hidden">
           <Image
-            src={event.image || '/placeholder-event.jpg'}
-            alt={event.name}
+            src={eventImage}
+            alt={eventName}
             fill
             loading="lazy"
             className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -318,13 +320,13 @@ export function EventCard({
         <div className="p-4">
           {/* Title - Validates: Requirements 5.4 */}
           <h3 className="font-semibold text-slate-900 dark:text-slate-50 line-clamp-2 mb-2">
-            {event.name}
+            {eventName}
           </h3>
           
           {/* Category name - Validates: Requirements 6.5 */}
-          {event.category && (
+          {(event.categoryName || event.category) && (
             <span className="inline-block text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full mb-2" data-testid="event-card-category">
-              {event.category}
+              {event.categoryName || event.category}
             </span>
           )}
           
@@ -382,8 +384,8 @@ export function EventCard({
       {/* Image container with hover zoom - Validates: Requirements 5.4 */}
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
-          src={event.image || '/placeholder-event.jpg'}
-          alt={event.name}
+          src={eventImage}
+          alt={eventName}
           fill
           loading="lazy"
           className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -429,13 +431,13 @@ export function EventCard({
       <div className="p-4">
         {/* Title - Validates: Requirements 5.4 */}
         <h3 className="font-semibold text-slate-900 dark:text-slate-50 line-clamp-2 mb-2">
-          {event.name}
+          {eventName}
         </h3>
         
         {/* Category name - Validates: Requirements 6.5 */}
-        {event.category && (
+        {(event.categoryName || event.category) && (
           <span className="inline-block text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full mb-2" data-testid="event-card-category">
-            {event.category}
+            {event.categoryName || event.category}
           </span>
         )}
         

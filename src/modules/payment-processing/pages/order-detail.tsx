@@ -88,13 +88,13 @@ export default function OrderDetailPage() {
     );
   }
 
-  const eventDate = event ? new Date(event.date) : new Date();
+  const eventDate = event ? new Date(event.startDate || event.date) : new Date();
   const isPastEvent = eventDate < new Date();
   const canRequestRefund = order.status === 'completed' && !isPastEvent && !refundRequested;
 
   // Get ticket type info for each ticket
   const getTicketTypeInfo = (ticketTypeId: string): TicketType | undefined => {
-    return event?.ticketTypes.find((tt) => tt.id === ticketTypeId);
+    return (event?.ticketTypes || []).find((tt) => tt.id === ticketTypeId);
   };
 
   // Handle refund request
@@ -144,7 +144,7 @@ export default function OrderDetailPage() {
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(30, 41, 59);
-      pdf.text(event?.name || 'Event', margin, 65);
+      pdf.text(event?.title || event?.name || 'Event', margin, 65);
       
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
@@ -290,7 +290,7 @@ export default function OrderDetailPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                {event.name}
+                {event.title || event.name}
               </h3>
               <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
                 <p>📅 {eventDate.toLocaleDateString('en-US', {

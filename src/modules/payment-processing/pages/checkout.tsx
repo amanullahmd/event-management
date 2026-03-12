@@ -9,13 +9,13 @@ import { useCart } from '@/modules/payment-processing/context/CartContext';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { getEventById, createOrder } from '@/modules/shared-common/services/apiService';
 import type { Event } from '@/modules/shared-common/services/apiService';
-import { 
-  ShoppingCart, 
-  ArrowLeft, 
-  CheckCircle, 
-  Ticket, 
-  Calendar, 
-  MapPin, 
+import {
+  ShoppingCart,
+  ArrowLeft,
+  CheckCircle,
+  Ticket,
+  Calendar,
+  MapPin,
   CreditCard,
   Shield,
   Trash2,
@@ -25,8 +25,11 @@ import {
   Mail,
   Phone,
   Home,
-  Sparkles
+  Sparkles,
+  Wallet,
+  CircleDollarSign
 } from 'lucide-react';
+import { useToast } from '@/modules/shared-common/components/shared/ToastContainer';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +63,7 @@ interface FormErrors {
 export default function CheckoutPage() {
   const { items, getSubtotal, getFees, getTotal, clearCart, removeItem, updateQuantity } = useCart();
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [events, setEvents] = useState<Record<string, Event>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +81,7 @@ export default function CheckoutPage() {
     zipCode: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
 
   // Load event details for cart items
   useEffect(() => {
@@ -156,33 +161,25 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const orderTickets = items.flatMap((item) =>
-        Array.from({ length: item.quantity }, (_, index) => ({
-          id: `ticket-${Date.now()}-${index}`,
-          orderId: '', // Will be set after order creation
-          eventId: item.eventId,
-          ticketTypeId: item.ticketTypeId,
-          qrCode: `QR-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-          checkedIn: false,
-          status: 'valid' as const,
-        }))
-      );
+      // Backend expects: { eventId, items: [{ ticketTypeId, quantity }] }
+      const orderItems = items.map((item) => ({
+        ticketTypeId: item.ticketTypeId,
+        quantity: item.quantity,
+      }));
 
       const order = await createOrder({
-        customerId: user?.id || 'guest',
         eventId: items[0]?.eventId || '',
-        tickets: orderTickets,
-        totalAmount: getTotal(),
-        status: 'completed',
-        paymentMethod: 'credit_card',
-        createdAt: new Date().toISOString(),
-      });
+        items: orderItems,
+        paymentMethod,
+      } as any);
 
       setOrderId(order.id);
       setOrderComplete(true);
       clearCart();
+      addToast('Order placed successfully!', 'success', 4000);
     } catch (error) {
       console.error('Error creating order:', error);
+      addToast('Failed to place order. Please try again.', 'error', 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -312,11 +309,11 @@ export default function CheckoutPage() {
                       <div className="flex-1">
                         <div className="flex items-start gap-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
-                            {event?.category?.charAt(0) || 'E'}
+                            {(event?.categoryName || event?.category)?.charAt(0) || 'E'}
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900 dark:text-white">
-                              {event?.name || 'Event'}
+                              {event?.title || event?.name || 'Event'}
                             </h3>
                             <p className="text-sm text-violet-600 dark:text-violet-400 font-medium">
                               {item.ticketType.name} - ${item.ticketType.price.toFixed(2)} each
@@ -324,7 +321,7 @@ export default function CheckoutPage() {
                             {event && (
                               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 <span className="flex items-center gap-1">
-                                  <Calendar className="w-3.5 h-3.5" /> {formatDate(event.date)}
+                                  <Calendar className="w-3.5 h-3.5" /> {formatDate(event.startDate || event.date)}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3.5 h-3.5" /> {event.location.split(',')[0]}
@@ -530,13 +527,98 @@ export default function CheckoutPage() {
                 <div className="lg:hidden pt-4">
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white h-12 text-lg font-semibold"
+                    className={`w-full text-white h-12 text-lg font-semibold ${
+                      paymentMethod === 'paypal'
+                        ? 'bg-gradient-to-r from-blue-500 to-sky-400 hover:from-blue-600 hover:to-sky-500'
+                        : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700'
+                    }`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Processing...' : `Complete Purchase - $${getTotal().toFixed(2)}`}
+                    {isSubmitting ? 'Processing...' : paymentMethod === 'paypal' ? `Pay with PayPal - $${getTotal().toFixed(2)}` : `Pay with Card - $${getTotal().toFixed(2)}`}
                   </Button>
                 </div>
               </form>
+            </Card>
+
+            {/* Payment Method Selection */}
+            <Card className="p-6 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                Payment Method
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Stripe Option */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('stripe')}
+                  className={`relative flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === 'stripe'
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-md'
+                      : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500'
+                  }`}
+                >
+                  {paymentMethod === 'stripe' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                    <CreditCard className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900 dark:text-white">Credit / Debit Card</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Powered by Stripe</p>
+                  </div>
+                </button>
+
+                {/* PayPal Option */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('paypal')}
+                  className={`relative flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === 'paypal'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                      : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500'
+                  }`}
+                >
+                  {paymentMethod === 'paypal' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-sky-400 rounded-lg flex items-center justify-center shrink-0">
+                    <CircleDollarSign className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900 dark:text-white">PayPal</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Pay with your PayPal account</p>
+                  </div>
+                </button>
+              </div>
+
+              {paymentMethod === 'stripe' && (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    You will be charged securely via Stripe. All major credit and debit cards accepted.
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-600 rounded text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-500">Visa</span>
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-600 rounded text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-500">Mastercard</span>
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-600 rounded text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-500">Amex</span>
+                    <span className="px-2 py-0.5 bg-white dark:bg-slate-600 rounded text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-500">Discover</span>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === 'paypal' && (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    You will be redirected to PayPal to complete your payment securely.
+                  </p>
+                </div>
+              )}
             </Card>
           </div>
 
@@ -569,10 +651,14 @@ export default function CheckoutPage() {
                 <div className="hidden lg:block">
                   <Button
                     onClick={handleSubmit}
-                    className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white h-12 text-lg font-semibold"
+                    className={`w-full text-white h-12 text-lg font-semibold ${
+                      paymentMethod === 'paypal'
+                        ? 'bg-gradient-to-r from-blue-500 to-sky-400 hover:from-blue-600 hover:to-sky-500'
+                        : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700'
+                    }`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Processing...' : 'Complete Purchase'}
+                    {isSubmitting ? 'Processing...' : paymentMethod === 'paypal' ? 'Pay with PayPal' : 'Pay with Card'}
                   </Button>
                 </div>
 
