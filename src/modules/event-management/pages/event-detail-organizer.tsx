@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getEventById, getMyOrders, type Event as ApiEvent, type Order } from '@/modules/shared-common/services/apiService';
+import { getEventById, getEventTicketTypes, getMyOrders, type Event as ApiEvent, type Order, type TicketType } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
@@ -18,19 +18,22 @@ export default function EventDetailsPage() {
   const params = useParams();
   const eventId = params.id as string;
   const [event, setEvent] = useState<ApiEvent | null>(null);
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch event and orders
+  // Fetch event, ticket types and orders
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [eventData, orders] = await Promise.all([
+        const [eventData, ticketTypesData, orders] = await Promise.all([
           getEventById(eventId),
+          getEventTicketTypes(eventId),
           getMyOrders()
         ]);
         setEvent(eventData || null);
+        setTicketTypes(ticketTypesData || []);
         setAllOrders(orders);
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -50,6 +53,12 @@ export default function EventDetailsPage() {
     return allOrders.filter((order) => order.eventId === event.id);
   }, [event, allOrders]);
 
+  // Refresh ticket types (called after add/edit/delete)
+  const refreshTicketTypes = async () => {
+    const updated = await getEventTicketTypes(eventId);
+    setTicketTypes(updated || []);
+  };
+
   const handleStatusChange = (updatedEvent: Event) => {
     // Convert Event type to ApiEvent type if needed
     setEvent(updatedEvent as any);
@@ -63,9 +72,9 @@ export default function EventDetailsPage() {
   const metrics = useMemo(() => {
     if (!event) return null;
 
-    const totalTickets = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.quantity, 0);
-    const totalSold = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.sold, 0);
-    const totalRevenue = (event.ticketTypes || []).reduce((sum, tt) => sum + tt.price * tt.sold, 0);
+    const totalTickets = ticketTypes.reduce((sum, tt) => sum + tt.quantity, 0);
+    const totalSold = ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
+    const totalRevenue = ticketTypes.reduce((sum, tt) => sum + tt.price * tt.sold, 0);
     const availableTickets = totalTickets - totalSold;
 
     return {
@@ -75,7 +84,7 @@ export default function EventDetailsPage() {
       totalRevenue,
       totalOrders: eventOrders.length,
     };
-  }, [event, eventOrders]);
+  }, [event, eventOrders, ticketTypes]);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -308,7 +317,7 @@ export default function EventDetailsPage() {
             </Link>
           </div>
 
-          {(event.ticketTypes || []).length === 0 ? (
+          {ticketTypes.length === 0 ? (
             <p className="text-slate-600 dark:text-slate-400 text-center py-8">
               No ticket types yet. Create one to start selling tickets.
             </p>
@@ -341,7 +350,7 @@ export default function EventDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {(event.ticketTypes || []).map((ticketType) => (
+                  {ticketTypes.map((ticketType) => (
                     <tr
                       key={ticketType.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"

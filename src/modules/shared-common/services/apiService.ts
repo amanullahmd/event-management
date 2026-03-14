@@ -101,7 +101,8 @@ export interface OrderItem {
   ticketTypeId: string;
   ticketTypeName?: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice?: number;
+  priceCents?: number; // backend field name
 }
 
 export interface Ticket {
@@ -231,6 +232,12 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
   });
 }
 
+export async function refundOrder(orderId: string): Promise<Order> {
+  return apiRequest(`/orders/${orderId}/refund`, {
+    method: 'POST',
+  });
+}
+
 export async function createOrder(order: Partial<Order>): Promise<Order> {
   return apiRequest('/orders', {
     method: 'POST',
@@ -271,6 +278,33 @@ export async function getEventTicketTypes(eventId: string): Promise<TicketType[]
     sold: (tt.quantitySold as number) || (tt.sold as number) || 0,
     type: (tt.category as string) || (tt.type as string) || 'GENERAL',
   }));
+}
+
+/** Organizer: create a ticket type for an event */
+export async function createTicketType(
+  eventId: string,
+  data: {
+    name: string;
+    category: string;
+    price: number;
+    quantityLimit: number;
+    saleStartDate?: string;
+    saleEndDate?: string;
+  }
+): Promise<TicketType> {
+  const result = await apiRequest(`/events/${eventId}/ticket-types`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return {
+    id: result.id,
+    eventId: result.eventId,
+    name: result.name,
+    price: result.price || 0,
+    quantity: result.quantityLimit || result.quantity || 0,
+    sold: result.quantitySold || result.sold || 0,
+    type: result.category || result.type || 'GENERAL',
+  };
 }
 
 export async function updateTicketCheckIn(ticketId: string, checkedIn: boolean): Promise<Ticket> {

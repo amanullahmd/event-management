@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getTicketsByCustomerId, getEventById, getAllEvents } from '@/modules/shared-common/services/apiService';
+import { getTicketsByCustomerId, getEventById, getEventTicketTypes } from '@/modules/shared-common/services/apiService';
 import { TicketCard } from '@/modules/payment-processing/components/customer/TicketCard';
 
 // Use types from apiService to match API responses
 type Ticket = Awaited<ReturnType<typeof getTicketsByCustomerId>>[number];
 type Event = Awaited<ReturnType<typeof getEventById>>;
-type TicketType = NonNullable<Event>['ticketTypes'][number];
+type TicketType = Awaited<ReturnType<typeof getEventTicketTypes>>[number];
 
 interface EnrichedTicket {
   ticket: Ticket;
@@ -40,18 +40,27 @@ export default function TicketsPage() {
       try {
         const tickets = await getTicketsByCustomerId(user.id);
         
-        // Fetch event data for each ticket
-        const enriched = await Promise.all(
-          tickets.map(async (ticket) => {
-            const event = await getEventById(ticket.eventId);
-            const ticketType = (event?.ticketTypes || []).find((tt) => tt.id === ticket.ticketTypeId);
-            return {
-              ticket,
-              event,
-              ticketType,
-            };
-          })
-        );
+        // Fetch event + ticket types for each unique event
+        const eventIds = [...new Set(tickets.map((t) => t.eventId))];
+        const [eventMap, ticketTypesMap] = await Promise.all([
+          Promise.all(eventIds.map((id) => getEventById(id).then((e) => [id, e] as const))).then(
+            (entries) => Object.fromEntries(entries)
+          ),
+          Promise.all(
+            eventIds.map((id) =>
+              getEventTicketTypes(id)
+                .then((tts) => [id, tts] as const)
+                .catch(() => [id, []] as const)
+            )
+          ).then((entries) => Object.fromEntries(entries)),
+        ]);
+
+        const enriched = tickets.map((ticket) => {
+          const event = eventMap[ticket.eventId] ?? null;
+          const ticketTypes: TicketType[] = ticketTypesMap[ticket.eventId] ?? [];
+          const ticketType = ticketTypes.find((tt) => tt.id === ticket.ticketTypeId);
+          return { ticket, event, ticketType };
+        });
         
         // Filter out tickets without event data
         setEnrichedTickets(enriched.filter((t) => t.event !== undefined) as EnrichedTicket[]);

@@ -7,17 +7,24 @@ import { QRCodeSVG } from 'qrcode.react';
 interface TicketCardProps {
   ticket: {
     id: string;
-    qrCode: string;
+    /** Backend stores QR payload as qrCodeData; qrCode kept for legacy support */
+    qrCodeData?: string;
+    qrCode?: string;
     checkedIn: boolean;
     checkedInAt?: string | Date;
     ticketTypeId: string;
     ticketNumber?: string;
+    attendeeName?: string;
     status?: string;
   };
   event: {
     id: string;
-    name: string;
-    date: string | Date;
+    /** Accept either name (legacy) or title (API) */
+    name?: string;
+    title?: string;
+    /** Accept either date (legacy) or startDate (API) */
+    date?: string | Date;
+    startDate?: string | Date;
     location: string;
     image?: string;
   };
@@ -37,9 +44,15 @@ interface TicketCardProps {
  */
 export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCardProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
+  const qrRef = useRef<SVGSVGElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  
-  const eventDate = new Date(event.date);
+
+  // Resolve flexible field names from API vs legacy types
+  const eventName = event.title || event.name || 'Event';
+  const eventDateRaw = event.startDate || event.date || new Date().toISOString();
+  const qrValue = ticket.qrCodeData || ticket.qrCode || ticket.id;
+
+  const eventDate = new Date(eventDateRaw as string);
   const isPastEvent = eventDate < new Date();
   const isCheckedIn = ticket.checkedIn;
   
@@ -91,7 +104,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
       pdf.setTextColor(30, 41, 59);
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      const eventNameLines = pdf.splitTextToSize(event.name, pageWidth - margin * 2);
+      const eventNameLines = pdf.splitTextToSize(eventName, pageWidth - margin * 2);
       pdf.text(eventNameLines, pageWidth / 2, 40, { align: 'center' });
       
       const yPos = 40 + (eventNameLines.length * 8);
@@ -134,7 +147,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
       pdf.setTextColor(71, 85, 105);
       pdf.text('QR Code:', qrX + qrSize / 2, qrY + 10, { align: 'center' });
       pdf.setFontSize(6);
-      pdf.text(ticket.qrCode, qrX + qrSize / 2, qrY + qrSize / 2, { align: 'center' });
+      pdf.text((qrValue || '').substring(0, 30), qrX + qrSize / 2, qrY + qrSize / 2, { align: 'center' });
       
       // QR Code label
       pdf.setFontSize(9);
@@ -151,7 +164,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
       pdf.text('This ticket is valid for one-time entry only.', pageWidth / 2, pageHeight - 10, { align: 'center' });
       
       // Save PDF
-      pdf.save(`ticket-${event.name.replace(/\s+/g, '-').toLowerCase()}-${ticket.id}.pdf`);
+      pdf.save(`ticket-${eventName.replace(/\s+/g, '-').toLowerCase()}-${ticket.id}.pdf`);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       // Fallback: try simpler PDF generation
@@ -163,7 +176,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
         pdf.text('Event Ticket', 105, 20, { align: 'center' });
         
         pdf.setFontSize(16);
-        pdf.text(event.name, 105, 40, { align: 'center' });
+        pdf.text(eventName, 105, 40, { align: 'center' });
         
         pdf.setFontSize(12);
         pdf.text(`Date: ${formattedDate}`, 20, 60);
@@ -171,7 +184,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
         pdf.text(`Location: ${event.location}`, 20, 80);
         pdf.text(`Ticket Type: ${ticketType?.name || 'Standard'}`, 20, 90);
         pdf.text(`Attendee: ${attendeeName}`, 20, 100);
-        pdf.text(`QR Code: ${ticket.qrCode}`, 20, 110);
+        pdf.text(`QR Code: ${(qrValue || '').substring(0, 40)}`, 20, 110);
         pdf.text(`Ticket ID: ${ticket.id}`, 20, 120);
         
         pdf.save(`ticket-${ticket.id}.pdf`);
@@ -184,13 +197,19 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
     }
   };
 
-  // Handle ticket print
+  // Handle ticket print — capture QR SVG from DOM for real scannable output
   const handlePrint = () => {
+    // Grab the rendered QR SVG from DOM and inline it
+    const qrSvgEl = qrRef.current;
+    const qrSvgString = qrSvgEl
+      ? `<div class="qr-code">${qrSvgEl.outerHTML}</div>`
+      : `<div class="qr-code" style="padding:10px;font-size:9px;word-break:break-all;">${qrValue}</div>`;
+
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Event Ticket - ${event.name}</title>
+          <title>Event Ticket - ${eventName}</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -257,7 +276,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
             <div class="header">
               <h1 style="margin: 0; font-size: 18px;">EVENT TICKET</h1>
             </div>
-            <div class="event-name">${event.name}</div>
+            <div class="event-name">${eventName}</div>
             <div class="detail">📅 ${formattedDate}</div>
             <div class="detail">🕐 ${formattedTime}</div>
             <div class="detail">📍 ${event.location}</div>
@@ -268,9 +287,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
               <strong>Attendee:</strong> ${attendeeName}
             </div>
             <div class="qr-section">
-              <div class="qr-code">
-                <img src="${generateQRDataUrl(ticket.qrCode)}" alt="QR Code" width="150" height="150" />
-              </div>
+              ${qrSvgString}
               <div class="ticket-id">Ticket ID: ${ticket.id}</div>
             </div>
             <div class="footer">
@@ -335,7 +352,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
           {/* Event Details */}
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3 truncate">
-              {event.name}
+              {eventName}
             </h3>
             
             <div className="space-y-2 text-sm">
@@ -364,10 +381,11 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
           <div className="flex-shrink-0">
             <div className="p-3 bg-white rounded-lg border border-slate-200 dark:border-slate-700">
               <QRCodeSVG
-                value={ticket.qrCode}
-                size={100}
-                level="M"
-                includeMargin={false}
+                ref={qrRef}
+                value={qrValue || ticket.id}
+                size={180}
+                level="H"
+                includeMargin={true}
               />
             </div>
             <p className="text-xs text-center text-slate-400 dark:text-slate-500 mt-2">

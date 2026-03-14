@@ -258,10 +258,16 @@ export default function CustomerOrdersPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-2">
                     <p className="text-xl font-bold text-slate-900 dark:text-white">
                       {formatCurrency((order.totalAmountCents || order.totalAmount || 0) / (order.totalAmountCents ? 100 : 1))}
                     </p>
+                    <Link
+                      href={`/orders/${order.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View Details
+                    </Link>
                   </div>
                 </div>
               </div>

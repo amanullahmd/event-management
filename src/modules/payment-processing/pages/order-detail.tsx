@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getOrderById, getEventById, getTicketsByOrderId, updateOrderStatus } from '@/modules/shared-common/services/apiService';
+import { getOrderById, getEventById, getTicketsByOrderId, refundOrder } from '@/modules/shared-common/services/apiService';
 import { QRCodeSVG } from 'qrcode.react';
 
 // Use types from apiService to match API responses
@@ -67,8 +67,9 @@ export default function OrderDetailPage() {
     );
   }
   
-  // Verify order belongs to current user
-  if (!order || (user && order.customerId !== user.id)) {
+  // Verify order belongs to current user (backend returns userId, not customerId)
+  const orderOwnerId = order?.customerId ?? order?.userId;
+  if (!order || (user && orderOwnerId !== user.id)) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-12 text-center">
         <div className="text-6xl mb-4">🔍</div>
@@ -88,22 +89,37 @@ export default function OrderDetailPage() {
     );
   }
 
+  // Normalize totalAmount: backend returns totalAmountCents (integer cents)
+  const totalAmount = order.totalAmountCents != null
+    ? order.totalAmountCents / 100
+    : (order.totalAmount || 0);
+
   const eventDate = event ? new Date(event.startDate || event.date) : new Date();
   const isPastEvent = eventDate < new Date();
-  const canRequestRefund = order.status === 'completed' && !isPastEvent && !refundRequested;
+  const orderStatusLower = order.status?.toLowerCase();
+  const canRequestRefund = (orderStatusLower === 'completed' || orderStatusLower === 'confirmed') && !isPastEvent && !refundRequested;
 
-  // Get ticket type info for each ticket
-  const getTicketTypeInfo = (ticketTypeId: string): TicketType | undefined => {
-    return (event?.ticketTypes || []).find((tt) => tt.id === ticketTypeId);
+  // Get ticket type info from order items
+  // ticket.ticketTypeId may be undefined (not in TicketResponse), so also match by name
+  const getTicketTypeInfo = (ticketTypeId: string | undefined, ticketTypeName?: string) => {
+    const item = order?.items?.find(
+      (i) => (ticketTypeId && i.ticketTypeId === ticketTypeId) ||
+              (ticketTypeName && i.ticketTypeName === ticketTypeName)
+    );
+    if (item) {
+      return {
+        name: item.ticketTypeName || ticketTypeName || 'Ticket',
+        price: item.priceCents != null ? item.priceCents / 100 : (item.unitPrice || 0),
+      };
+    }
+    return undefined;
   };
 
   // Handle refund request
   const handleRefundRequest = async () => {
     setIsRequestingRefund(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      updateOrderStatus(order.id, 'refunded');
+      await refundOrder(order.id);
       setRefundRequested(true);
     } catch (error) {
       console.error('Failed to request refund:', error);
@@ -161,13 +177,13 @@ export default function OrderDetailPage() {
       
       yPos += 10;
       tickets.forEach((ticket, index) => {
-        const ticketType = getTicketTypeInfo(ticket.ticketTypeId);
+        const ticketType = getTicketTypeInfo(ticket.ticketTypeId, ticket.ticketTypeName);
         
         pdf.setFontSize(11);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(71, 85, 105);
         pdf.text(`${index + 1}. ${ticketType?.name || 'Ticket'} - $${ticketType?.price.toFixed(2) || '0.00'}`, margin, yPos);
-        pdf.text(`   QR: ${ticket.qrCode}`, margin, yPos + 6);
+        pdf.text(`   QR: ${ticket.qrCodeData || ticket.qrCode || ticket.id}`, margin, yPos + 6);
         yPos += 16;
         
         if (yPos > 250) {
@@ -185,7 +201,7 @@ export default function OrderDetailPage() {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(30, 41, 59);
-      pdf.text(`Total: $${order.totalAmount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+      pdf.text(`Total: $${totalAmount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
       
       pdf.save(`order-${order.id}.pdf`);
     } catch (error) {
@@ -322,7 +338,7 @@ export default function OrderDetailPage() {
         </h2>
         <div className="space-y-4">
           {tickets.map((ticket, index) => {
-            const ticketType = getTicketTypeInfo(ticket.ticketTypeId);
+            const ticketType = getTicketTypeInfo(ticket.ticketTypeId, ticket.ticketTypeName);
             return (
               <div
                 key={ticket.id}
@@ -330,7 +346,7 @@ export default function OrderDetailPage() {
               >
                 <div className="flex-shrink-0">
                   <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <QRCodeSVG value={ticket.qrCode} size={60} level="M" />
+                    <QRCodeSVG value={ticket.qrCodeData || ticket.qrCode || ticket.id} size={60} level="M" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -345,7 +361,7 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {ticketType?.name || 'Standard Ticket'}
+                    {ticketType?.name || ticket.ticketTypeName || 'Standard Ticket'}
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                     ID: {ticket.id}
@@ -377,20 +393,20 @@ export default function OrderDetailPage() {
           <div className="flex justify-between text-sm">
             <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
             <span className="text-slate-900 dark:text-white">
-              ${(order.totalAmount * 0.9).toFixed(2)}
+              ${(totalAmount * 0.9).toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-600 dark:text-slate-400">Service Fee</span>
             <span className="text-slate-900 dark:text-white">
-              ${(order.totalAmount * 0.1).toFixed(2)}
+              ${(totalAmount * 0.1).toFixed(2)}
             </span>
           </div>
           <div className="border-t border-slate-200 dark:border-slate-800 pt-3 mt-3">
             <div className="flex justify-between">
               <span className="text-lg font-semibold text-slate-900 dark:text-white">Total</span>
               <span className="text-lg font-bold text-slate-900 dark:text-white">
-                ${order.totalAmount.toFixed(2)}
+                ${totalAmount.toFixed(2)}
               </span>
             </div>
           </div>

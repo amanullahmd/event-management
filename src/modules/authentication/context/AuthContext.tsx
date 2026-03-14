@@ -321,7 +321,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      
+
+      // Pending organizer accounts have no token — return response for caller to handle
+      if (!data.token) {
+        return data;
+      }
+
       // Store JWT tokens and user info
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_refresh_token', data.refreshToken);
@@ -341,9 +346,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status: 'active' as const,
         createdAt: new Date(),
       };
-      
+
       setUser(user);
       checkTokenExpiration();
+      return data;
     } catch (error) {
       throw error;
     } finally {

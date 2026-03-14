@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/lib/hooks';
-import { getMyEvents } from '@/modules/shared-common/services/apiService';
+import { useAuth } from '@/modules/authentication/context/AuthContext';
+import { getMyEvents, getEventTicketTypes, type TicketType } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
-import type { TicketType } from '@/lib/types';
 
 interface TicketTypeWithEvent extends TicketType {
   eventName: string;
@@ -23,7 +22,7 @@ export default function TicketManagementPage() {
   const [ticketTypes, setTicketTypes] = useState<TicketTypeWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load organizer's events
+  // Load organizer's events and their ticket types
   useEffect(() => {
     const loadEvents = async () => {
       if (!user) {
@@ -34,6 +33,25 @@ export default function TicketManagementPage() {
       try {
         const events = await getMyEvents();
         setOrganizerEvents(events);
+        // Fetch ticket types for each event in parallel
+        const allTypes: TicketTypeWithEvent[] = [];
+        await Promise.all(
+          events.map(async (event: any) => {
+            try {
+              const types = await getEventTicketTypes(event.id);
+              types.forEach((tt) => {
+                allTypes.push({
+                  ...tt,
+                  eventName: event.title || event.name || '',
+                  eventId: event.id,
+                });
+              });
+            } catch {
+              // skip events where ticket types can't be loaded
+            }
+          })
+        );
+        setTicketTypes(allTypes);
       } catch (error) {
         console.error('Failed to load events:', error);
         setOrganizerEvents([]);
@@ -44,28 +62,26 @@ export default function TicketManagementPage() {
     loadEvents();
   }, [user]);
 
-  // Update ticket types when events or filter changes
+  // Update ticket types when filter changes
   useEffect(() => {
-    if (selectedEventId) {
-      const event = organizerEvents.find((e) => e.id === selectedEventId);
-      const types = (event?.ticketTypes || []).map((tt: any) => ({
-        ...tt,
-        eventName: event?.title || event?.name || '',
-        eventId: event?.id || '',
-      })) as TicketTypeWithEvent[];
-      setTicketTypes(types);
-    } else {
-      // Return all ticket types from all events
-      const types = organizerEvents.flatMap((event) =>
-        (event.ticketTypes || []).map((tt: any) => ({
-          ...tt,
-          eventName: event.title || event.name,
-          eventId: event.id,
-        }))
-      ) as TicketTypeWithEvent[];
-      setTicketTypes(types);
-    }
-  }, [organizerEvents, selectedEventId]);
+    if (!selectedEventId) return; // all types already loaded on mount
+    const loadFiltered = async () => {
+      try {
+        const types = await getEventTicketTypes(selectedEventId);
+        const event = organizerEvents.find((e: any) => e.id === selectedEventId);
+        setTicketTypes(
+          types.map((tt) => ({
+            ...tt,
+            eventName: event?.title || event?.name || '',
+            eventId: selectedEventId,
+          }))
+        );
+      } catch {
+        setTicketTypes([]);
+      }
+    };
+    loadFiltered();
+  }, [selectedEventId, organizerEvents]);
 
   // Format currency
   const formatCurrency = (value: number) => {

@@ -9,6 +9,7 @@ import { Bell, Search, LogOut, User, ChevronDown, Check, ShoppingCart, Calendar,
 import { cn } from '@/modules/shared-common/utils/cn';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiRequest } from '@/modules/shared-common/utils/api';
+import { useCart } from '@/modules/payment-processing/context/CartContext';
 
 interface UserNotification {
   id: string;
@@ -73,6 +74,8 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { items: cartItems } = useCart();
+  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const avatarInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
   // Profile dropdown state
@@ -245,6 +248,22 @@ export function DashboardLayout({
                 </div>
               )}
             </div>
+
+            {/* Cart icon — CUSTOMER only */}
+            {user?.role?.toUpperCase() === 'CUSTOMER' && (
+              <Link
+                href="/checkout"
+                className="relative p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                title="Shopping Cart"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {cartItemCount > 9 ? '9+' : cartItemCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
             <ThemeToggle />
 

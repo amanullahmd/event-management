@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getEventById, type Event } from '@/modules/shared-common/services/apiService';
+import { getEventById, createTicketType, type Event } from '@/modules/shared-common/services/apiService';
 import { TicketTypeForm } from '@/modules/ticket-management/components/TicketTypeForm';
 
 /**
@@ -53,29 +53,15 @@ export default function CreateTicketTypePage() {
         throw new Error('Event not found');
       }
 
-      // Map category to type
-      const typeMap: Record<string, 'vip' | 'regular' | 'early-bird'> = {
-        'VIP': 'vip',
-        'EARLY_BIRD': 'early-bird',
-        'GENERAL_ADMISSION': 'regular',
-        'STUDENT': 'regular',
-        'GROUP': 'regular',
-        'CUSTOM': 'regular',
-      };
-
-      // Add ticket type to event
-      const newTicketType = {
-        id: `ticket-type-${event.id}-${Date.now()}`,
-        eventId: event.id,
+      // POST ticket type to backend
+      await createTicketType(eventId, {
         name: data.name,
+        category: data.category,
         price: data.price,
-        quantity: data.quantityLimit,
-        sold: 0,
-        type: typeMap[data.category] || 'regular',
-      };
-
-      if (!event.ticketTypes) event.ticketTypes = [];
-      event.ticketTypes.push(newTicketType);
+        quantityLimit: data.quantityLimit,
+        saleStartDate: data.saleStartDate || undefined,
+        saleEndDate: data.saleEndDate || undefined,
+      });
 
       // Redirect to event details
       router.push(`/organizer/events/${eventId}`);

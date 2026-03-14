@@ -19,7 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 
-type StatusFilter = 'all' | 'active' | 'blocked' | 'inactive';
+type StatusFilter = 'all' | 'pending' | 'active' | 'blocked' | 'inactive';
 
 export default function OrganizerManagementPage() {
   const [organizers, setOrganizers] = useState<User[]>([]);
@@ -77,8 +77,10 @@ export default function OrganizerManagementPage() {
       const matchesSearch =
         name.includes(searchTerm.toLowerCase()) ||
         org.email.toLowerCase().includes(searchTerm.toLowerCase());
+      // 'pending' tab shows BLOCKED organizers (awaiting approval)
+      const effectiveFilter = statusFilter === 'pending' ? 'blocked' : statusFilter;
       const matchesStatus =
-        statusFilter === 'all' || org.status?.toLowerCase() === statusFilter;
+        effectiveFilter === 'all' || org.status?.toLowerCase() === effectiveFilter;
       return matchesSearch && matchesStatus;
     });
   }, [organizers, searchTerm, statusFilter]);
@@ -195,7 +197,7 @@ export default function OrganizerManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -203,7 +205,7 @@ export default function OrganizerManagementPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">{organizers.length}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Total Organizers</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Total</p>
             </div>
           </div>
         </div>
@@ -217,6 +219,22 @@ export default function OrganizerManagementPage() {
                 {organizers.filter(isActive).length}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Active</p>
+            </div>
+          </div>
+        </div>
+        <div
+          className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-amber-200 dark:border-amber-800 shadow-sm cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+          onClick={() => { setStatusFilter('pending'); setCurrentPage(1); }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                {organizers.filter(isBlocked).length}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500">Pending Approval</p>
             </div>
           </div>
         </div>
@@ -238,18 +256,20 @@ export default function OrganizerManagementPage() {
       {/* Search + Filter */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex gap-1">
-            {(['all', 'active', 'blocked', 'inactive'] as StatusFilter[]).map((tab) => (
+          <div className="flex gap-1 flex-wrap">
+            {(['all', 'pending', 'active', 'blocked', 'inactive'] as StatusFilter[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => { setStatusFilter(tab); setCurrentPage(1); }}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors capitalize ${
                   statusFilter === tab
-                    ? 'bg-indigo-600 text-white'
+                    ? tab === 'pending'
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-indigo-600 text-white'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                {tab}
+                {tab === 'pending' ? 'Pending Approval' : tab}
               </button>
             ))}
           </div>

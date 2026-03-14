@@ -22,6 +22,7 @@ export default function RegisterPage() {
     role: 'customer' as UserRole,
   });
   const [error, setError] = useState('');
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (
@@ -95,12 +96,18 @@ export default function RegisterPage() {
       }
 
       // Attempt registration
-      await register(
+      const result = await register(
         formData.name,
         formData.email,
         formData.password,
         formData.role
       );
+
+      // Organizer accounts need admin approval — no token issued
+      if (formData.role === 'organizer' || (result as { redirectUrl?: string })?.redirectUrl?.includes('pending')) {
+        setPendingApproval(true);
+        return;
+      }
 
       // Redirect to verification page
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
@@ -114,6 +121,35 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (pendingApproval) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted</h2>
+            <p className="text-slate-600 mb-6">
+              Your organizer account has been created and is <strong>pending admin approval</strong>.
+              You will receive an email once your account has been reviewed and activated.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
+            >
+              Back to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
@@ -198,6 +234,11 @@ export default function RegisterPage() {
                 <option value="customer">Customer</option>
                 <option value="organizer">Event Organizer</option>
               </select>
+              {formData.role === 'organizer' && (
+                <p className="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  Organizer accounts require admin approval before you can log in and create events.
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
