@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '@/modules/shared-common/components/ui/theme-toggle';
-import { Bell, Search, LogOut, User, ChevronDown, Check, ShoppingCart, Calendar, AlertCircle, Megaphone, Gift } from 'lucide-react';
+import { Bell, Search, LogOut, User, ChevronDown, Check, ShoppingCart, AlertCircle, Megaphone, Gift } from 'lucide-react';
 import { cn } from '@/modules/shared-common/utils/cn';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiRequest } from '@/modules/shared-common/utils/api';
@@ -112,8 +112,9 @@ export function DashboardLayout({
     }
   }, []);
 
-  // Poll unread count every 30s
+  // Poll unread count every 30s (async fetch — setState is called in the async callback, not synchronously)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);

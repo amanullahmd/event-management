@@ -58,7 +58,10 @@ export default function TicketsPage() {
         const enriched = tickets.map((ticket) => {
           const event = eventMap[ticket.eventId] ?? null;
           const ticketTypes: TicketType[] = ticketTypesMap[ticket.eventId] ?? [];
-          const ticketType = ticketTypes.find((tt) => tt.id === ticket.ticketTypeId);
+          // Backend doesn't send ticketTypeId in TicketResponse, match by name instead
+          const ticketType = ticketTypes.find(
+            (tt) => tt.name === ticket.ticketTypeName
+          ) ?? (ticket.ticketTypeName ? { id: '', name: ticket.ticketTypeName, price: 0, quantity: 0, sold: 0, eventId: ticket.eventId, type: 'GENERAL' as const } : undefined);
           return { ticket, event, ticketType };
         });
         

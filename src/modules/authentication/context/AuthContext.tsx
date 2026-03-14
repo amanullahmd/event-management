@@ -19,7 +19,7 @@ export interface AuthContextType {
     email: string,
     password: string,
     role: UserRole
-  ) => Promise<void>;
+  ) => Promise<{ redirectUrl?: string; token?: string; [key: string]: unknown } | void>;
   refreshToken: () => Promise<void>;
   isTokenExpiringSoon: boolean;
 }

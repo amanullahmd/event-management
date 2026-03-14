@@ -371,7 +371,7 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
               {ticketType && (
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <span>🎫</span>
-                  <span>{ticketType.name} - ${ticketType.price.toFixed(2)}</span>
+                  <span>{ticketType.name}{ticketType.price > 0 ? ` - $${ticketType.price.toFixed(2)}` : ''}</span>
                 </div>
               )}
             </div>
@@ -452,20 +452,4 @@ export function TicketCard({ ticket, event, ticketType, attendeeName }: TicketCa
   );
 }
 
-/**
- * Generate QR code as data URL for print functionality
- */
-function generateQRDataUrl(value: string): string {
-  // Create a simple SVG-based QR code data URL
-  // This is a placeholder - the actual QR code is rendered by qrcode.react
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" fill="white"/>
-      <text x="50" y="50" text-anchor="middle" dominant-baseline="middle" font-size="8" fill="#333">
-        ${value.substring(0, 20)}
-      </text>
-    </svg>
-  `;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
-}
 

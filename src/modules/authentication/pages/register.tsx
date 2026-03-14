@@ -19,7 +19,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'customer' as UserRole,
+    role: 'CUSTOMER' as UserRole,
   });
   const [error, setError] = useState('');
   const [pendingApproval, setPendingApproval] = useState(false);
@@ -104,7 +104,7 @@ export default function RegisterPage() {
       );
 
       // Organizer accounts need admin approval — no token issued
-      if (formData.role === 'organizer' || (result as { redirectUrl?: string })?.redirectUrl?.includes('pending')) {
+      if (formData.role === 'ORGANIZER' || (result as { redirectUrl?: string } | void)?.redirectUrl?.includes('pending')) {
         setPendingApproval(true);
         return;
       }
@@ -231,10 +231,10 @@ export default function RegisterPage() {
                 disabled={isSubmitting || isLoading}
                 aria-label="Account type"
               >
-                <option value="customer">Customer</option>
-                <option value="organizer">Event Organizer</option>
+                <option value="CUSTOMER">Customer</option>
+                <option value="ORGANIZER">Event Organizer</option>
               </select>
-              {formData.role === 'organizer' && (
+              {formData.role === 'ORGANIZER' && (
                 <p className="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                   Organizer accounts require admin approval before you can log in and create events.
                 </p>

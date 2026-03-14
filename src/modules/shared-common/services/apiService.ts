@@ -47,6 +47,7 @@ export interface Event {
   location: string;
   category: string;
   categoryName?: string;
+  eventType?: string;
   image?: string;
   imageUrl?: string;
   status: string;
@@ -94,6 +95,10 @@ export interface Order {
   status: string;
   paymentMethod?: string;
   createdAt: string;
+  /** Enriched fields returned by some endpoints */
+  customerName?: string;
+  customerEmail?: string;
+  eventName?: string;
 }
 
 export interface OrderItem {
@@ -295,15 +300,15 @@ export async function createTicketType(
   const result = await apiRequest(`/events/${eventId}/ticket-types`, {
     method: 'POST',
     body: JSON.stringify(data),
-  });
+  }) as Record<string, unknown>;
   return {
-    id: result.id,
-    eventId: result.eventId,
-    name: result.name,
-    price: result.price || 0,
-    quantity: result.quantityLimit || result.quantity || 0,
-    sold: result.quantitySold || result.sold || 0,
-    type: result.category || result.type || 'GENERAL',
+    id: result.id as string,
+    eventId: result.eventId as string,
+    name: result.name as string,
+    price: (result.price as number) || 0,
+    quantity: (result.quantityLimit as number) || (result.quantity as number) || 0,
+    sold: (result.quantitySold as number) || (result.sold as number) || 0,
+    type: (result.category as string) || (result.type as string) || 'GENERAL',
   };
 }
 
