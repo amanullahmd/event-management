@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import EventEditForm from '@/modules/event-management/components/EventEditForm';
 import type { EventResponse } from '@/modules/event-management/types/event-update';
+import { apiRequest } from '@/modules/shared-common/utils/api';
 
 export default function EventEditPage() {
   const router = useRouter();
@@ -29,38 +30,19 @@ export default function EventEditPage() {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('auth_token');
-        
-        if (!token) {
-          setError('Authentication required');
-          router.push('/login');
-          return;
-        }
-
-        const response = await fetch(`/api/events/${eventId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError('Event not found');
-          } else if (response.status === 403) {
-            setError('You do not have permission to edit this event');
-          } else if (response.status === 401) {
-            router.push('/login');
-            return;
-          } else {
-            setError('Failed to load event');
-          }
-          return;
-        }
-
-        const eventData = await response.json();
+        const eventData = await apiRequest<EventResponse>(`/events/${eventId}`);
         setEvent(eventData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load event');
+      } catch (err: any) {
+        const msg = err?.message || '';
+        if (msg.includes('404')) {
+          setError('Event not found');
+        } else if (msg.includes('403')) {
+          setError('You do not have permission to edit this event');
+        } else if (msg.includes('401')) {
+          router.push('/login');
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to load event');
+        }
       } finally {
         setLoading(false);
       }

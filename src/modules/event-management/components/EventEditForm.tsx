@@ -9,6 +9,7 @@ import { EventTypeSelector, type EventType } from './EventTypeSelector';
 import { CategorySelector } from './CategorySelector';
 import { ImageUploadArea } from './ImageUploadArea';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { getRefundPolicy, upsertRefundPolicy, type RefundPolicy } from '@/modules/shared-common/services/apiService';
 
 interface ValidationErrors {
   [key: string]: string;
@@ -56,6 +57,14 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(initialEvent.imageUrl);
   const { uploadImage, deleteImage, isUploading, error: imageUploadError } = useImageUpload();
+
+  // Refund policy state
+  const [refundPolicyEnabled, setRefundPolicyEnabled] = useState(false);
+  const [refundWindowDays, setRefundWindowDays] = useState(7);
+  const [refundPercentage, setRefundPercentage] = useState(100);
+  const [isSavingPolicy, setIsSavingPolicy] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
+  const [policyLoaded, setPolicyLoaded] = useState(false);
 
   // Validation functions
   const validateTitle = (title: string): string | null => {
@@ -419,14 +428,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
   const handleRefreshAndRetry = async () => {
     try {
       // Reload event data from API
-      const response = await fetch(`/api/events/${eventId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-      
-      if (response.ok) {
-        const refreshedEvent = await response.json();
+      const { apiRequest: req } = await import('@/modules/shared-common/utils/api');
+      const refreshedEvent = await req<EventResponse>(`/events/${eventId}`);
+      if (refreshedEvent) {
         setFormData(refreshedEvent);
         setChangedFields(new Set());
         setIsDirty(false);
@@ -450,6 +454,21 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
+
+  // Load existing refund policy for this event
+  useEffect(() => {
+    if (!eventId || policyLoaded) return;
+    getRefundPolicy(eventId)
+      .then((policy) => {
+        if (policy) {
+          setRefundPolicyEnabled(policy.isActive);
+          setRefundWindowDays(policy.refundWindowDays ?? 7);
+          setRefundPercentage(policy.refundPercentage ?? 100);
+        }
+      })
+      .catch(() => { /* no policy yet, use defaults */ })
+      .finally(() => setPolicyLoaded(true));
+  }, [eventId, policyLoaded]);
 
   const formatDateForInput = (date: string | Date | undefined): string => {
     if (!date) return '';
@@ -737,6 +756,132 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({
               changedFields.has('notes') ? 'bg-blue-50' : ''
             }`}
           />
+        </div>
+
+        {/* Refund Policy */}
+        <div className="border border-gray-200 rounded-lg p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Refund Policy</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Allow attendees to request refunds within a set window before the event
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={refundPolicyEnabled}
+              onClick={() => setRefundPolicyEnabled((v) => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                refundPolicyEnabled ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  refundPolicyEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {refundPolicyEnabled && (
+            <div className="space-y-4 pt-2 border-t border-gray-100">
+              {/* Refund window */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Refund Window
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Customers can request a refund up to this many days before the event starts
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 3, 7, 14, 30].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => setRefundWindowDays(days)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium border transition-colors ${
+                        refundWindowDays === days
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      {days} {days === 1 ? 'day' : 'days'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Selected: Requests must be submitted at least <strong>{refundWindowDays} {refundWindowDays === 1 ? 'day' : 'days'}</strong> before the event
+                </p>
+              </div>
+
+              {/* Refund percentage */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Refund Amount
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Percentage of the ticket price returned to the customer
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[25, 50, 75, 100].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setRefundPercentage(pct)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium border transition-colors ${
+                        refundPercentage === pct
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Policy summary */}
+              <div className="bg-blue-50 rounded-md px-4 py-3 text-sm text-blue-800">
+                Attendees can request a <strong>{refundPercentage}%</strong> refund up to{' '}
+                <strong>{refundWindowDays} {refundWindowDays === 1 ? 'day' : 'days'}</strong> before the event starts.
+              </div>
+            </div>
+          )}
+
+          {/* Save policy button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={isSavingPolicy}
+              onClick={async () => {
+                setIsSavingPolicy(true);
+                setPolicyMessage('');
+                try {
+                  await upsertRefundPolicy(eventId, {
+                    refundWindowDays,
+                    refundPercentage,
+                    isActive: refundPolicyEnabled,
+                  });
+                  setPolicyMessage(refundPolicyEnabled
+                    ? `Policy saved: ${refundPercentage}% refund, ${refundWindowDays}-day window`
+                    : 'Refund policy disabled');
+                } catch {
+                  setPolicyMessage('Failed to save refund policy. Please try again.');
+                } finally {
+                  setIsSavingPolicy(false);
+                }
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSavingPolicy ? 'Saving...' : 'Save Refund Policy'}
+            </button>
+            {policyMessage && (
+              <p className={`mt-2 text-xs ${policyMessage.startsWith('Failed') ? 'text-red-600' : 'text-green-700'}`}>
+                {policyMessage.startsWith('Failed') ? '' : '✓ '}{policyMessage}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Submit Button */}

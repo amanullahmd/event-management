@@ -5,16 +5,16 @@ import Link from 'next/link';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
   getMyEvents,
-  getMyOrders,
+  getTicketsByEventId,
+  getEventTicketTypes,
   type Event,
-  type Order,
+  type Ticket,
 } from '@/modules/shared-common/services/apiService';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import {
   TrendingUp,
-  DollarSign,
-  Ticket,
+  Ticket as TicketIcon,
   Calendar,
   Users,
   BarChart3,
@@ -29,7 +29,7 @@ export default function OrganizerAnalyticsPage() {
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
-  const [organizerOrders, setOrganizerOrders] = useState<Order[]>([]);
+  const [organizerTickets, setOrganizerTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,17 +42,26 @@ export default function OrganizerAnalyticsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [events, orders] = await Promise.all([
-        getMyEvents(),
-        getMyOrders(),
-      ]);
+      const rawEvents = await getMyEvents();
 
-      setOrganizerEvents(events);
+      // Enrich events with ticket type data (my-events doesn't embed sold counts)
+      const enrichedEvents = await Promise.all(
+        rawEvents.map(async (event) => {
+          const ticketTypes = await getEventTicketTypes(event.id).catch(() => event.ticketTypes || []);
+          return { ...event, ticketTypes };
+        })
+      );
+      setOrganizerEvents(enrichedEvents);
 
-      // Filter orders to only those for this organizer's events
-      const eventIds = events.map((e) => e.id);
-      const filteredOrders = orders.filter((order) => eventIds.includes(order.eventId));
-      setOrganizerOrders(filteredOrders);
+      // Fetch tickets for all organizer events in parallel to derive order data
+      if (enrichedEvents.length > 0) {
+        const ticketArrays = await Promise.all(
+          enrichedEvents.map((e) => getTicketsByEventId(e.id).catch(() => [] as Ticket[]))
+        );
+        setOrganizerTickets(ticketArrays.flat());
+      } else {
+        setOrganizerTickets([]);
+      }
     } catch (err) {
       console.error('Failed to fetch analytics data:', err);
       setError('Failed to load analytics data');
@@ -65,35 +74,8 @@ export default function OrganizerAnalyticsPage() {
     fetchData();
   }, [fetchData]);
 
-  // Filter orders by date range
-  const filteredOrders = useMemo(() => {
-    if (dateRange === 'all') return organizerOrders;
-
-    const now = new Date();
-    const cutoff = new Date();
-    if (dateRange === 'week') cutoff.setDate(now.getDate() - 7);
-    else if (dateRange === 'month') cutoff.setDate(now.getDate() - 30);
-    else if (dateRange === 'year') cutoff.setFullYear(now.getFullYear() - 1);
-
-    return organizerOrders.filter(
-      (order) => new Date(order.createdAt) >= cutoff
-    );
-  }, [organizerOrders, dateRange]);
-
   const analytics = useMemo(() => {
-    const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    const totalTicketsSold = organizerEvents.reduce(
-      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0),
-      0
-    );
-    const totalCapacity = organizerEvents.reduce(
-      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.quantity || 0), 0),
-      0
-    );
-    const avgTicketPrice = totalTicketsSold > 0 ? totalRevenue / totalTicketsSold : 0;
-    const conversionRate = totalCapacity > 0 ? (totalTicketsSold / totalCapacity) * 100 : 0;
-
-    // Revenue by event
+    // Revenue by event — computed from ticketType price × sold (accurate, no orders needed)
     const revenueByEvent = organizerEvents
       .map((event) => {
         const eventRevenue = (event.ticketTypes || []).reduce(
@@ -115,6 +97,19 @@ export default function OrganizerAnalyticsPage() {
       })
       .sort((a, b) => b.revenue - a.revenue);
 
+    // Totals from ticketType aggregates (not from orders)
+    const totalRevenue = revenueByEvent.reduce((sum, e) => sum + e.revenue, 0);
+    const totalTicketsSold = organizerEvents.reduce(
+      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0),
+      0
+    );
+    const totalCapacity = organizerEvents.reduce(
+      (sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.quantity || 0), 0),
+      0
+    );
+    const avgTicketPrice = totalTicketsSold > 0 ? totalRevenue / totalTicketsSold : 0;
+    const conversionRate = totalCapacity > 0 ? (totalTicketsSold / totalCapacity) * 100 : 0;
+
     // Ticket type breakdown
     const ticketTypeBreakdown = organizerEvents.reduce(
       (acc, event) => {
@@ -131,16 +126,44 @@ export default function OrganizerAnalyticsPage() {
       {} as Record<string, { sold: number; revenue: number }>
     );
 
-    // Recent orders (sorted by date, most recent first)
-    const recentOrders = [...filteredOrders]
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      .slice(0, 5);
+    // Total orders = unique orderIds across all tickets
+    const uniqueOrderIds = new Set(organizerTickets.map((t) => t.orderId).filter(Boolean));
+    const totalOrders = uniqueOrderIds.size;
+
+    // Recent orders — derived from tickets grouped by orderId
+    const orderGroups = new Map<string, Ticket[]>();
+    for (const ticket of organizerTickets) {
+      if (!ticket.orderId) continue;
+      if (!orderGroups.has(ticket.orderId)) {
+        orderGroups.set(ticket.orderId, []);
+      }
+      orderGroups.get(ticket.orderId)!.push(ticket);
+    }
+    const recentOrders = Array.from(orderGroups.entries())
+      .slice(0, 5)
+      .map(([orderId, tickets]) => {
+        const firstTicket = tickets[0];
+        const event = organizerEvents.find((e) => e.id === firstTicket.eventId);
+        // Look up price by ticketTypeName (backend returns name, not ID in ticket response)
+        const amount = tickets.reduce((sum, t) => {
+          const tt = (event?.ticketTypes || []).find(
+            (tt) => tt.name === t.ticketTypeName || tt.id === t.ticketTypeId
+          );
+          return sum + (tt?.price || 0);
+        }, 0);
+        return {
+          id: orderId,
+          customerName: firstTicket.attendeeName || 'Customer',
+          eventName: event?.title || event?.name || firstTicket.eventTitle || 'Unknown Event',
+          eventId: firstTicket.eventId,
+          createdAt: firstTicket.createdAt || '',
+          totalAmount: amount,
+          status: firstTicket.status || 'CONFIRMED',
+        };
+      });
 
     // Orders by status
-    const ordersByStatus = filteredOrders.reduce(
+    const ordersByStatus = recentOrders.reduce(
       (acc, order) => {
         const status = (order.status || 'unknown').toLowerCase();
         acc[status] = (acc[status] || 0) + 1;
@@ -159,13 +182,13 @@ export default function OrganizerAnalyticsPage() {
       activeEvents: organizerEvents.filter((e) =>
         ['active', 'published'].includes((e.status || '').toLowerCase())
       ).length,
-      totalOrders: filteredOrders.length,
+      totalOrders,
       revenueByEvent,
       ticketTypeBreakdown,
       recentOrders,
       ordersByStatus,
     };
-  }, [organizerEvents, filteredOrders]);
+  }, [organizerEvents, organizerTickets]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -323,7 +346,7 @@ export default function OrganizerAnalyticsPage() {
               </p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-white" />
+              <TrendingUp className="w-6 h-6 text-white" />
             </div>
           </div>
         </Card>
@@ -339,7 +362,7 @@ export default function OrganizerAnalyticsPage() {
               </p>
             </div>
             <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center">
-              <Ticket className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+              <TicketIcon className="w-6 h-6 text-violet-600 dark:text-violet-400" />
             </div>
           </div>
         </Card>
@@ -605,7 +628,7 @@ export default function OrganizerAnalyticsPage() {
                       {order.eventName || 'Unknown Event'}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                      {formatDate(order.createdAt)}
+                      {order.createdAt ? formatDate(order.createdAt) : '—'}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                       {formatCurrency(order.totalAmount || 0)}

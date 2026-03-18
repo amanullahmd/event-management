@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { getAllEvents, updateEventStatus, getAllOrganizers } from '@/modules/shared-common/services/apiService';
+import { getAllAdminEvents, updateEventStatus, getAllOrganizers } from '@/modules/shared-common/services/apiService';
 import type { Event, User } from '@/modules/shared-common/services/apiService';
 import {
   Search,
@@ -40,7 +40,7 @@ export default function EventManagementPage() {
       setLoading(true);
       setError(null);
       const [eventsData, organizersData] = await Promise.all([
-        getAllEvents(),
+        getAllAdminEvents(),
         getAllOrganizers(),
       ]);
       setEvents(eventsData || []);
@@ -221,7 +221,7 @@ export default function EventManagementPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                {statusCounts['active'] || statusCounts['published'] || 0}
+                {events.filter(e => ['active', 'published'].includes((e.status || '').toLowerCase())).length}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Active Events</p>
             </div>
@@ -234,7 +234,7 @@ export default function EventManagementPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                {events.reduce((sum, e) => sum + (e.totalAttendees || 0), 0)}
+                {events.reduce((sum, e) => sum + (e.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0), 0)}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Total Attendees</p>
             </div>
@@ -366,7 +366,7 @@ export default function EventManagementPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {event.totalAttendees || 0} sold
+                      {(event.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0)} sold
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusBadge(event.status)}`}>
@@ -546,7 +546,9 @@ export default function EventManagementPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                   <p className="text-sm text-slate-500 dark:text-slate-400">Total Attendees</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{selectedEvent.totalAttendees || 0}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {(selectedEvent.ticketTypes || []).reduce((s, tt) => s + (tt.sold || 0), 0)}
+                  </p>
                 </div>
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                   <p className="text-sm text-slate-500 dark:text-slate-400">Total Revenue</p>

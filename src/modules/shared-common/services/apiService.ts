@@ -117,12 +117,14 @@ export interface Ticket {
   ticketTypeId: string;
   ticketTypeName?: string;
   ticketNumber?: string;
+  ticketCode?: string;
   eventTitle?: string;
   attendeeName?: string;
   qrCode: string;
   qrCodeData?: string;
   checkedIn: boolean;
   checkedInAt?: string;
+  createdAt?: string;
   status: string;
 }
 
@@ -185,7 +187,26 @@ export async function getEventById(id: string): Promise<Event | undefined> {
 }
 
 export async function getEventsByOrganizerId(organizerId: string): Promise<Event[]> {
-  return apiRequest(`/admin/organizers/${organizerId}/events`);
+  const data = await apiRequest(`/admin/organizers/${organizerId}/events`);
+  return unwrapPageResponse<Event>(data);
+}
+
+/** Admin: get ALL events across all organizers, enriched with ticket type data */
+export async function getAllAdminEvents(): Promise<Event[]> {
+  const organizers = await getAllOrganizers();
+  const eventArrays = await Promise.all(
+    organizers.map((org) => getEventsByOrganizerId(org.id).catch(() => [] as Event[]))
+  );
+  const allEvents = eventArrays.flat();
+
+  // Enrich each event with ticket type data (includes sold counts and prices)
+  const enriched = await Promise.all(
+    allEvents.map(async (event) => {
+      const ticketTypes = await getEventTicketTypes(event.id).catch(() => event.ticketTypes || []);
+      return { ...event, ticketTypes };
+    })
+  );
+  return enriched;
 }
 
 /** Organizer: get own events (all statuses, backend uses JWT to identify organizer) */
@@ -237,9 +258,10 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
   });
 }
 
-export async function refundOrder(orderId: string): Promise<Order> {
-  return apiRequest(`/orders/${orderId}/refund`, {
+export async function refundOrder(orderId: string, reason?: string): Promise<Order> {
+  return apiRequest(`/v1/orders/${orderId}/refund`, {
     method: 'POST',
+    body: JSON.stringify({ reason: reason || 'Customer refund request' }),
   });
 }
 
@@ -286,6 +308,56 @@ export async function getTicketsByCustomerId(_customerId: string): Promise<Ticke
 
 export async function getTicketsByEventId(eventId: string): Promise<Ticket[]> {
   return apiRequest(`/tickets/event/${eventId}`);
+}
+
+/** Organizer: get a single ticket type by ID */
+export async function getTicketTypeById(eventId: string, ticketTypeId: string): Promise<TicketType | null> {
+  const tt = await apiRequest(`/events/${eventId}/ticket-types/${ticketTypeId}`) as Record<string, unknown>;
+  if (!tt) return null;
+  return {
+    id: tt.id as string,
+    eventId: tt.eventId as string,
+    name: tt.name as string,
+    price: (tt.price as number) || 0,
+    quantity: (tt.quantityLimit as number) || (tt.quantity as number) || 0,
+    sold: (tt.quantitySold as number) || (tt.sold as number) || 0,
+    type: (tt.category as string) || (tt.type as string) || 'GENERAL',
+    saleStartDate: tt.saleStartDate as string | undefined,
+    saleEndDate: tt.saleEndDate as string | undefined,
+  } as TicketType & { saleStartDate?: string; saleEndDate?: string };
+}
+
+/** Organizer: update a ticket type */
+export async function updateTicketType(
+  eventId: string,
+  ticketTypeId: string,
+  data: {
+    name?: string;
+    category?: string;
+    price?: number;
+    quantityLimit?: number;
+    saleStartDate?: string;
+    saleEndDate?: string;
+  }
+): Promise<TicketType> {
+  const result = await apiRequest(`/events/${eventId}/ticket-types/${ticketTypeId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }) as Record<string, unknown>;
+  return {
+    id: result.id as string,
+    eventId: result.eventId as string,
+    name: result.name as string,
+    price: (result.price as number) || 0,
+    quantity: (result.quantityLimit as number) || (result.quantity as number) || 0,
+    sold: (result.quantitySold as number) || (result.sold as number) || 0,
+    type: (result.category as string) || (result.type as string) || 'GENERAL',
+  };
+}
+
+/** Organizer: delete a ticket type */
+export async function deleteTicketType(eventId: string, ticketTypeId: string): Promise<void> {
+  await apiRequest(`/events/${eventId}/ticket-types/${ticketTypeId}`, { method: 'DELETE' });
 }
 
 /** Public: get ticket types for an event (no auth required) */
@@ -378,6 +450,95 @@ export async function updateRefundStatus(refundId: string, status: string): Prom
   return apiRequest(`/admin/refunds/${refundId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
+  });
+}
+
+// ─── Organizer Refund Request API ───────────────────────────────────────────
+
+export interface RefundRequestItem {
+  id: string;
+  ticketId: string;
+  eventId: string;
+  status: string;
+  reason: string;
+  refundAmount: number;
+  originalAmount: number;
+  refundPercentage: number;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface RefundPolicy {
+  id?: string;
+  eventId: string;
+  refundWindowDays: number;
+  refundPercentage: number;
+  isActive: boolean;
+  isDefault?: boolean;
+  updatedAt?: string;
+}
+
+export interface RefundEligibility {
+  eligible: boolean;
+  reason?: string;
+  refundPercentage?: number;
+  windowDays?: number;
+  deadline?: string;
+  deadlineDate?: string;
+}
+
+export async function getRefundPolicy(eventId: string): Promise<RefundPolicy> {
+  return apiRequest(`/v1/events/${eventId}/refund-policy`);
+}
+
+export async function upsertRefundPolicy(eventId: string, policy: {
+  refundWindowDays: number;
+  refundPercentage: number;
+  isActive: boolean;
+}): Promise<RefundPolicy> {
+  return apiRequest(`/v1/events/${eventId}/refund-policy`, {
+    method: 'PUT',
+    body: JSON.stringify(policy),
+  });
+}
+
+export async function getRefundEligibility(orderId: string): Promise<RefundEligibility> {
+  try {
+    return await apiRequest(`/v1/orders/${orderId}/refund-eligibility`);
+  } catch {
+    return { eligible: false, reason: 'Unable to check eligibility' };
+  }
+}
+
+export async function getEventRefundRequests(eventId: string, status?: string): Promise<RefundRequestItem[]> {
+  const url = status
+    ? `/v1/events/${eventId}/refund-requests?status=${encodeURIComponent(status)}`
+    : `/v1/events/${eventId}/refund-requests`;
+  const data = await apiRequest(url);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function approveRefundRequest(requestId: string, note?: string): Promise<RefundRequestItem> {
+  return apiRequest(`/v1/refund-requests/${requestId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  });
+}
+
+export async function rejectRefundRequest(requestId: string, reason?: string): Promise<RefundRequestItem> {
+  return apiRequest(`/v1/refund-requests/${requestId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function submitTicketRefundRequest(ticketId: string, reason: string): Promise<RefundRequestItem> {
+  return apiRequest(`/v1/tickets/${ticketId}/refund-request`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
   });
 }
 

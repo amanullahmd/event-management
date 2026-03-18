@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/modules/shared-common/components/ui/button';
-import { getMyEvents, type Event } from '@/modules/shared-common/services/apiService';
+import { getMyEvents, getEventTicketTypes, type Event } from '@/modules/shared-common/services/apiService';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
   Calendar,
@@ -36,7 +36,14 @@ export default function OrganizerEventsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const organizerEvents = await getMyEvents();
+      const rawEvents = await getMyEvents();
+      // Enrich with ticket type data (sold counts & prices not embedded in my-events response)
+      const organizerEvents = await Promise.all(
+        rawEvents.map(async (event) => {
+          const ticketTypes = await getEventTicketTypes(event.id).catch(() => event.ticketTypes || []);
+          return { ...event, ticketTypes };
+        })
+      );
       setEvents(organizerEvents);
     } catch (err) {
       console.error('Failed to fetch events:', err);

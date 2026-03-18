@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getMyEvents, type Event } from '@/modules/shared-common/services/apiService';
+import { getMyEvents, getEventTicketTypes, type Event } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import Link from 'next/link';
 import { 
@@ -59,7 +59,14 @@ export default function ModernOrganizerDashboard() {
     try {
       setIsLoading(true);
       setError(null);
-      const events = await getMyEvents();
+      const rawEvents = await getMyEvents();
+      // Enrich events with ticket type data (my-events response has empty ticketTypes)
+      const events = await Promise.all(
+        rawEvents.map(async (event) => {
+          const ticketTypes = await getEventTicketTypes(event.id).catch(() => event.ticketTypes || []);
+          return { ...event, ticketTypes };
+        })
+      );
       setOrganizerEvents(events);
       setLastRefresh(new Date());
     } catch (err) {

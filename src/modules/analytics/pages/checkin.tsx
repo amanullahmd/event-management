@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useAuth } from '@/lib/hooks';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
   getMyEvents,
   updateTicketCheckIn,
   getTicketsByEventId,
   getEventById,
-  getUserById,
   getTicketByQrCode,
   getTicketByNumber
 } from '@/modules/shared-common/services/apiService';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Input } from '@/modules/shared-common/components/ui/input';
+import { Camera, CameraOff, ScanLine } from 'lucide-react';
 
 type Event = Awaited<ReturnType<typeof getMyEvents>>[number];
 type Ticket = Awaited<ReturnType<typeof getTicketsByEventId>>[number];
@@ -39,6 +39,12 @@ export default function CheckinPage() {
   const [checkInStats, setCheckInStats] = useState({ total: 0, checkedIn: 0, percentage: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [mode, setMode] = useState<CheckInMode>('qr');
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<{ deviceId: string; label: string }[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -85,6 +91,78 @@ export default function CheckinPage() {
 
     fetchStats();
   }, [selectedEventId]);
+
+  const stopCamera = useCallback(() => {
+    if (scannerControlsRef.current) {
+      scannerControlsRef.current.stop();
+      scannerControlsRef.current = null;
+    }
+    setIsCameraActive(false);
+    setCameraError(null);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError(null);
+    try {
+      const { BrowserQRCodeReader } = await import('@zxing/library');
+      const codeReader = new BrowserQRCodeReader();
+
+      // List cameras
+      const devices = await codeReader.listVideoInputDevices();
+      if (devices.length === 0) {
+        setCameraError('No camera found on this device.');
+        return;
+      }
+      const camList = devices.map((d) => ({ deviceId: d.deviceId, label: d.label || `Camera ${d.deviceId.slice(0, 6)}` }));
+      setCameras(camList);
+      const deviceId = selectedCamera || camList[0].deviceId;
+      if (!selectedCamera) setSelectedCamera(deviceId);
+
+      setIsCameraActive(true);
+
+      // Small delay to ensure video element is mounted
+      await new Promise((r) => setTimeout(r, 100));
+
+      if (!videoRef.current) {
+        setCameraError('Camera view failed to initialize. Please try again.');
+        setIsCameraActive(false);
+        return;
+      }
+
+      const controls = await codeReader.decodeFromVideoDevice(
+        deviceId,
+        videoRef.current,
+        (result, err) => {
+          if (result) {
+            const text = result.getText();
+            setInputValue(text);
+            // Auto-trigger check-in after scan
+            setTimeout(() => {
+              document.getElementById('checkin-submit-btn')?.click();
+            }, 200);
+          }
+        }
+      );
+      scannerControlsRef.current = controls;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('Permission') || message.includes('NotAllowed')) {
+        setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
+      } else {
+        setCameraError('Failed to start camera: ' + message);
+      }
+      setIsCameraActive(false);
+    }
+  }, [selectedCamera]);
+
+  // Stop camera when switching modes or on unmount
+  useEffect(() => {
+    if (mode !== 'qr') stopCamera();
+  }, [mode, stopCamera]);
+
+  useEffect(() => {
+    return () => { stopCamera(); };
+  }, [stopCamera]);
 
   const handleCheckIn = useCallback(async () => {
     if (!inputValue.trim() || !selectedEventId) {
@@ -255,8 +333,77 @@ export default function CheckinPage() {
             </button>
           </div>
 
+          {mode === 'qr' && (
+            <div className="mb-4">
+              {/* Camera toggle button */}
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  type="button"
+                  onClick={isCameraActive ? stopCamera : startCamera}
+                  disabled={!selectedEventId}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
+                    isCameraActive
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50'
+                      : 'bg-violet-600 hover:bg-violet-700 text-white'
+                  }`}
+                >
+                  {isCameraActive ? (
+                    <><CameraOff className="w-4 h-4" /> Stop Camera</>
+                  ) : (
+                    <><Camera className="w-4 h-4" /> Scan with Camera</>
+                  )}
+                </button>
+                {cameras.length > 1 && !isCameraActive && (
+                  <select
+                    value={selectedCamera}
+                    onChange={(e) => setSelectedCamera(e.target.value)}
+                    className="px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    {cameras.map((cam) => (
+                      <option key={cam.deviceId} value={cam.deviceId}>{cam.label}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Camera error */}
+              {cameraError && (
+                <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                  {cameraError}
+                </div>
+              )}
+
+              {/* Camera viewport */}
+              {isCameraActive && (
+                <div className="relative mb-4 rounded-xl overflow-hidden bg-black border-2 border-violet-500">
+                  <video
+                    ref={videoRef}
+                    className="w-full max-h-72 object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                  {/* Scan overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="relative w-56 h-56">
+                      <div className="absolute inset-0 border-2 border-white/60 rounded-lg" />
+                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-violet-400 rounded-tl-lg" />
+                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-violet-400 rounded-tr-lg" />
+                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-violet-400 rounded-bl-lg" />
+                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-violet-400 rounded-br-lg" />
+                      <ScanLine className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-violet-400 animate-pulse" />
+                    </div>
+                  </div>
+                  <p className="absolute bottom-2 left-0 right-0 text-center text-white/80 text-xs">
+                    Point camera at QR code to scan
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {mode === 'qr' ? 'Scan QR Code' : 'Enter Ticket Number'}
+            {mode === 'qr' ? 'Or enter QR code manually' : 'Enter Ticket Number'}
           </label>
           <div className="flex gap-2">
             <Input
@@ -264,11 +411,12 @@ export default function CheckinPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={mode === 'qr' ? 'Scan QR code here...' : 'e.g. PF-20260312-0001'}
+              placeholder={mode === 'qr' ? 'Paste or type QR code...' : 'e.g. PF-20260312-0001'}
               disabled={!selectedEventId || isProcessing}
-              autoFocus
+              autoFocus={mode === 'ticket'}
             />
             <Button
+              id="checkin-submit-btn"
               onClick={handleCheckIn}
               disabled={!selectedEventId || isProcessing}
             >

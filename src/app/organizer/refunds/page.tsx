@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
-  getAllEvents,
-  getAllRefunds,
-  getRefundsByEventId,
-  updateRefundStatus,
-  type RefundRequest,
+  getMyEvents,
+  getEventRefundRequests,
+  approveRefundRequest,
+  rejectRefundRequest,
+  type RefundRequestItem,
 } from '@/modules/shared-common/services/apiService';
 import {
   RefreshCw,
@@ -19,64 +19,58 @@ import {
   AlertCircle,
   Search,
   XCircle,
+  MessageSquare,
 } from 'lucide-react';
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type StatusFilter = 'all' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
 
-interface EnrichedRefund extends RefundRequest {
+interface EnrichedRefundRequest extends RefundRequestItem {
   eventName?: string;
-  customerName?: string;
 }
 
 export default function OrganizerRefundsPage() {
   const { user } = useAuth();
-  const [refunds, setRefunds] = useState<EnrichedRefund[]>([]);
+  const [requests, setRequests] = useState<EnrichedRefundRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
-  const fetchRefunds = useCallback(async () => {
+  const fetchRequests = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
       setError(null);
 
-      // Get organizer's events
-      const allEvents = await getAllEvents();
-      const organizerEvents = allEvents.filter(e => e.organizerId === user.id);
-      const eventMap = new Map(organizerEvents.map(e => [e.id, e.name]));
+      // Get organizer's own events (all statuses, not just public ones)
+      const organizerEvents = await getMyEvents();
+      const eventMap = new Map(organizerEvents.map((e) => [e.id, e.title || e.name]));
 
-      // Fetch refunds for each of the organizer's events
-      let allRefunds: RefundRequest[] = [];
-      try {
-        // Try fetching all refunds (admin endpoint), then filter by organizer events
-        const refundsData = await getAllRefunds();
-        const eventIds = new Set(organizerEvents.map(e => e.id));
-        allRefunds = (refundsData || []).filter(r => eventIds.has(r.eventId));
-      } catch {
-        // Fallback: try per-event refund fetch
-        const refundPromises = organizerEvents.map(async (event) => {
-          try {
-            return await getRefundsByEventId(event.id);
-          } catch {
-            return [];
-          }
-        });
-        const results = await Promise.all(refundPromises);
-        allRefunds = results.flat();
-      }
+      // Fetch refund requests for each event in parallel
+      const results = await Promise.allSettled(
+        organizerEvents.map((event) => getEventRefundRequests(event.id))
+      );
 
-      // Enrich with event names
-      const enriched: EnrichedRefund[] = allRefunds.map(refund => ({
-        ...refund,
-        eventName: eventMap.get(refund.eventId) || 'Unknown Event',
-      }));
+      const allRequests: EnrichedRefundRequest[] = [];
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+          result.value.forEach((req) => {
+            allRequests.push({
+              ...req,
+              eventName: eventMap.get(organizerEvents[i].id) || 'Unknown Event',
+            });
+          });
+        }
+      });
 
-      // Sort by creation date (most recent first)
-      enriched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setRefunds(enriched);
+      // Sort by newest first
+      allRequests.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setRequests(allRequests);
     } catch (err) {
       console.error('Failed to fetch refund requests:', err);
       setError('Failed to load refund requests');
@@ -86,82 +80,142 @@ export default function OrganizerRefundsPage() {
   }, [user]);
 
   useEffect(() => {
-    fetchRefunds();
-  }, [fetchRefunds]);
+    fetchRequests();
+  }, [fetchRequests]);
 
-  const handleUpdateStatus = async (refundId: string, status: 'approved' | 'rejected') => {
+  const handleApprove = async (requestId: string) => {
     try {
-      setActionLoading(refundId);
-      await updateRefundStatus(refundId, status);
-      // Update local state
-      setRefunds(prev =>
-        prev.map(r =>
-          r.id === refundId
-            ? { ...r, status, processedAt: new Date() } as EnrichedRefund
+      setActionLoading(requestId);
+      await approveRefundRequest(requestId);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? { ...r, status: 'APPROVED', approvedAt: new Date().toISOString() }
             : r
         )
       );
     } catch (err) {
-      console.error(`Failed to ${status} refund:`, err);
-      alert(`Failed to ${status} refund. Please try again.`);
+      console.error('Failed to approve refund request:', err);
+      alert('Failed to approve refund request. Please try again.');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-
-  const formatDate = (date: string | Date) =>
-    new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-
-  const normalizeStatus = (status: string) => (status || '').toLowerCase();
-
-  const filteredRefunds = useMemo(() => {
-    return refunds.filter(refund => {
-      const matchesSearch =
-        !searchTerm ||
-        (refund.eventName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (refund.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (refund.reason || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        refund.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || normalizeStatus(refund.status) === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [refunds, searchTerm, statusFilter]);
-
-  const stats = useMemo(() => ({
-    total: refunds.length,
-    pending: refunds.filter(r => normalizeStatus(r.status) === 'pending').length,
-    approved: refunds.filter(r => normalizeStatus(r.status) === 'approved').length,
-    totalRefunded: refunds
-      .filter(r => normalizeStatus(r.status) === 'approved')
-      .reduce((sum, r) => sum + (r.amount || 0), 0),
-  }), [refunds]);
-
-  const getStatusColor = (status: string) => {
-    const s = normalizeStatus(status);
-    const styles: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-      approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    };
-    return styles[s] || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
+  const handleReject = async (requestId: string) => {
+    try {
+      setActionLoading(requestId);
+      const reason = rejectReason[requestId] || '';
+      await rejectRefundRequest(requestId, reason);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                status: 'REJECTED',
+                rejectedAt: new Date().toISOString(),
+                rejectionReason: reason,
+              }
+            : r
+        )
+      );
+      setRejectingId(null);
+      setRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to reject refund request:', err);
+      alert('Failed to reject refund request. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const getStatusIcon = (status: string) => {
+  const formatCurrency = (value: number | undefined) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+
+  const formatDate = (date: string | Date | undefined) =>
+    date
+      ? new Date(date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : '—';
+
+  const normalizeStatus = (s: string) => (s || '').toUpperCase();
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const matchesSearch =
+        !searchTerm ||
+        (req.eventName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (req.reason || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' || normalizeStatus(req.status) === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [requests, searchTerm, statusFilter]);
+
+  const stats = useMemo(() => ({
+    total: requests.length,
+    pending: requests.filter((r) => normalizeStatus(r.status) === 'PENDING_REVIEW').length,
+    approved: requests.filter((r) => normalizeStatus(r.status) === 'APPROVED').length,
+    totalRefunded: requests
+      .filter((r) => normalizeStatus(r.status) === 'APPROVED')
+      .reduce((sum, r) => sum + (r.refundAmount || 0), 0),
+  }), [requests]);
+
+  const getStatusBadge = (status: string) => {
     const s = normalizeStatus(status);
-    if (s === 'pending') return <Clock className="w-3.5 h-3.5" />;
-    if (s === 'approved') return <CheckCircle className="w-3.5 h-3.5" />;
-    if (s === 'rejected') return <XCircle className="w-3.5 h-3.5" />;
-    return <AlertCircle className="w-3.5 h-3.5" />;
+    const configs: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
+      PENDING_REVIEW: {
+        cls: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+        icon: <Clock className="w-3.5 h-3.5" />,
+        label: 'Pending Review',
+      },
+      APPROVED: {
+        cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        label: 'Approved',
+      },
+      REJECTED: {
+        cls: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+        icon: <XCircle className="w-3.5 h-3.5" />,
+        label: 'Rejected',
+      },
+      PROCESSING: {
+        cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        icon: <RefreshCw className="w-3.5 h-3.5 animate-spin" />,
+        label: 'Processing',
+      },
+      COMPLETED: {
+        cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        label: 'Completed',
+      },
+    };
+    const cfg = configs[s] || {
+      cls: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300',
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
+      label: s,
+    };
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full shrink-0 ${cfg.cls}`}>
+        {cfg.icon}
+        {cfg.label}
+      </span>
+    );
   };
 
   const statusTabs: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'rejected', label: 'Rejected' },
+    { key: 'PENDING_REVIEW', label: 'Pending Review' },
+    { key: 'APPROVED', label: 'Approved' },
+    { key: 'REJECTED', label: 'Rejected' },
   ];
 
   if (loading) {
@@ -173,19 +227,15 @@ export default function OrganizerRefundsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 animate-pulse">
+            <div
+              key={i}
+              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 animate-pulse"
+            >
               <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
               <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded mt-2" />
             </div>
           ))}
         </div>
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 animate-pulse">
-            <div className="h-5 w-40 bg-slate-200 dark:bg-slate-700 rounded mb-3" />
-            <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-            <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
-          </div>
-        ))}
       </div>
     );
   }
@@ -198,7 +248,7 @@ export default function OrganizerRefundsPage() {
           <h2 className="text-red-600 text-xl font-bold mb-2">Error</h2>
           <p className="text-red-500 mb-6">{error}</p>
           <button
-            onClick={fetchRefunds}
+            onClick={fetchRequests}
             className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" /> Retry
@@ -215,11 +265,11 @@ export default function OrganizerRefundsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Refund Management</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Process and manage refund requests for your events
+            Review and process refund requests from attendees
           </p>
         </div>
         <button
-          onClick={fetchRefunds}
+          onClick={fetchRequests}
           className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm text-slate-700 dark:text-slate-300"
         >
           <RefreshCw className="w-4 h-4" /> Refresh
@@ -242,7 +292,7 @@ export default function OrganizerRefundsPage() {
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Pending</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Pending Review</p>
               <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{stats.pending}</p>
             </div>
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
@@ -265,7 +315,9 @@ export default function OrganizerRefundsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Refunded</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(stats.totalRefunded)}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                {formatCurrency(stats.totalRefunded)}
+              </p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
               <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -288,6 +340,11 @@ export default function OrganizerRefundsPage() {
               }`}
             >
               {tab.label}
+              {tab.key === 'PENDING_REVIEW' && stats.pending > 0 && (
+                <span className="ml-1.5 bg-yellow-500 text-white text-xs rounded-full px-1.5 py-0.5">
+                  {stats.pending}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -303,91 +360,143 @@ export default function OrganizerRefundsPage() {
         </div>
       </div>
 
-      {/* Refunds List */}
-      {filteredRefunds.length > 0 ? (
+      {/* Requests List */}
+      {filteredRequests.length > 0 ? (
         <div className="space-y-4">
-          {filteredRefunds.map((refund) => (
-            <div
-              key={refund.id}
-              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                        {refund.eventName}
-                      </h3>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full shrink-0 ${getStatusColor(refund.status)}`}>
-                        {getStatusIcon(refund.status)}
-                        {normalizeStatus(refund.status).charAt(0).toUpperCase() + normalizeStatus(refund.status).slice(1)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                      Refund #{refund.id.length > 12 ? refund.id.slice(0, 12) + '...' : refund.id}
-                    </p>
+          {filteredRequests.map((req) => {
+            const isPending = normalizeStatus(req.status) === 'PENDING_REVIEW';
+            const isRejecting = rejectingId === req.id;
 
-                    {refund.reason && (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                        Reason: {refund.reason}
+            return (
+              <div
+                key={req.id}
+                className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Event name + status */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white truncate">
+                          {req.eventName}
+                        </h3>
+                        {getStatusBadge(req.status)}
+                      </div>
+
+                      {/* Request ID */}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                        Request #{req.id.slice(0, 12)}…
                       </p>
-                    )}
 
-                    <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                      {refund.customerName && (
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
-                            {refund.customerName.charAt(0).toUpperCase()}
-                          </span>
-                          {refund.customerName}
-                        </span>
+                      {/* Reason */}
+                      {req.reason && (
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Reason:</span>{' '}
+                          {req.reason}
+                        </p>
                       )}
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                        Requested {formatDate(refund.createdAt)}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5" />
-                        {formatCurrency(refund.amount || 0)}
-                      </span>
+
+                      {/* Rejection reason if rejected */}
+                      {req.rejectionReason && (
+                        <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                          <span className="font-medium">Rejection reason:</span> {req.rejectionReason}
+                        </p>
+                      )}
+
+                      {/* Meta */}
+                      <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Submitted {formatDate(req.createdAt)}
+                        </span>
+                        {req.originalAmount != null && (
+                          <span className="flex items-center gap-1.5">
+                            <DollarSign className="w-3.5 h-3.5" />
+                            Original: {formatCurrency(req.originalAmount)}
+                          </span>
+                        )}
+                        {req.refundPercentage != null && (
+                          <span className="text-slate-500 dark:text-slate-400">
+                            {req.refundPercentage}% refund
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    {refund.processedAt && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                        Processed on {formatDate(refund.processedAt)}
+                    {/* Right side: amount + actions */}
+                    <div className="text-right shrink-0">
+                      <p className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                        {formatCurrency(req.refundAmount || req.originalAmount)}
                       </p>
-                    )}
+
+                      {isPending && !isRejecting && (
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => handleApprove(req.id)}
+                            disabled={actionLoading === req.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            {actionLoading === req.id ? 'Processing...' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => setRejectingId(req.id)}
+                            disabled={actionLoading === req.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                      {formatCurrency(refund.amount || 0)}
-                    </p>
-                    {normalizeStatus(refund.status) === 'pending' && (
-                      <div className="flex gap-2">
+                  {/* Rejection reason input */}
+                  {isPending && isRejecting && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Rejection reason (optional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={rejectReason[req.id] || ''}
+                        onChange={(e) =>
+                          setRejectReason((prev) => ({ ...prev, [req.id]: e.target.value }))
+                        }
+                        placeholder="Enter reason for rejection..."
+                        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                      />
+                      <div className="flex gap-2 mt-2 justify-end">
                         <button
-                          onClick={() => handleUpdateStatus(refund.id, 'approved')}
-                          disabled={actionLoading === refund.id}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors"
+                          onClick={() => {
+                            setRejectingId(null);
+                            setRejectReason((prev) => {
+                              const next = { ...prev };
+                              delete next[req.id];
+                              return next;
+                            });
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          {actionLoading === refund.id ? 'Processing...' : 'Approve'}
+                          Cancel
                         </button>
                         <button
-                          onClick={() => handleUpdateStatus(refund.id, 'rejected')}
-                          disabled={actionLoading === refund.id}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50 transition-colors"
+                          onClick={() => handleReject(req.id)}
+                          disabled={actionLoading === req.id}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 transition-colors"
                         >
                           <XCircle className="w-3.5 h-3.5" />
-                          Reject
+                          {actionLoading === req.id ? 'Processing...' : 'Confirm Reject'}
                         </button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -395,12 +504,12 @@ export default function OrganizerRefundsPage() {
             <CreditCard className="w-10 h-10" />
           </div>
           <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-            {searchTerm || statusFilter !== 'all' ? 'No matching refunds' : 'No refund requests'}
+            {searchTerm || statusFilter !== 'all' ? 'No matching refund requests' : 'No refund requests yet'}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
             {searchTerm || statusFilter !== 'all'
               ? 'Try adjusting your search or filter.'
-              : 'No refund requests have been submitted for your events yet.'}
+              : 'Refund requests from attendees will appear here.'}
           </p>
         </div>
       )}

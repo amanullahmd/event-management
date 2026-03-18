@@ -80,7 +80,7 @@ export default function AdminAnalyticsPage() {
     }
 
     const total = filtered.length;
-    const completed = filtered.filter((o) => ['completed', 'COMPLETED', 'CONFIRMED'].includes(o.status)).length;
+    const completed = filtered.filter((o) => ['completed', 'COMPLETED', 'confirmed', 'CONFIRMED'].includes(o.status)).length;
     const refunded = filtered.filter((o) => ['refunded', 'REFUNDED'].includes(o.status)).length;
     const pending = filtered.filter((o) => ['pending', 'PENDING'].includes(o.status)).length;
     const totalRevenue = filtered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);

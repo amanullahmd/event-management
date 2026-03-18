@@ -3,7 +3,7 @@
 import { useMemo, memo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { getAllEvents, getAllOrders } from '@/modules/shared-common/services/apiService';
-import type { Event, Order } from '@/modules/shared-common/services/apiService';
+import type { Event, AdminOrder } from '@/modules/shared-common/services/apiService';
 
 // Lazy load recharts components to reduce initial bundle
 const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), { ssr: false });
@@ -23,7 +23,7 @@ const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ defa
  */
 export const AnalyticsCharts = memo(function AnalyticsCharts() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export const AnalyticsCharts = memo(function AnalyticsCharts() {
       }))
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
       .slice(-12); // Last 12 months
-  }, []);
+  }, [events]);
 
   const revenueTrendsData = useMemo(() => {
     if (orders.length === 0) return [];
@@ -77,7 +77,7 @@ export const AnalyticsCharts = memo(function AnalyticsCharts() {
     // Group revenue by month
     const monthlyRevenue: Record<string, number> = {};
     
-    orders.forEach((order: Order) => {
+    orders.forEach((order: AdminOrder) => {
       const date = new Date(order.createdAt);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + order.totalAmount;
@@ -94,7 +94,7 @@ export const AnalyticsCharts = memo(function AnalyticsCharts() {
       }))
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
       .slice(-12); // Last 12 months
-  }, []);
+  }, [orders]);
 
   const totalEvents = useMemo(() => eventTrendsData.reduce((sum, d) => sum + d.events, 0), [eventTrendsData]);
   const totalRevenue = useMemo(() => revenueTrendsData.reduce((sum, d) => sum + d.revenue, 0), [revenueTrendsData]);

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getOrderById, getEventById, getTicketsByOrderId, refundOrder } from '@/modules/shared-common/services/apiService';
+import { getOrderById, getEventById, getTicketsByOrderId, refundOrder, getRefundEligibility, type RefundRequestItem, type RefundEligibility } from '@/modules/shared-common/services/apiService';
 import { QRCodeSVG } from 'qrcode.react';
 
 // Use types from apiService to match API responses
@@ -25,6 +25,8 @@ export default function OrderDetailPage() {
   const { user } = useAuth();
   const [isRequestingRefund, setIsRequestingRefund] = useState(false);
   const [refundRequested, setRefundRequested] = useState(false);
+  const [existingRefundStatus, setExistingRefundStatus] = useState<string | null>(null);
+  const [refundEligibility, setRefundEligibility] = useState<RefundEligibility | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [event, setEvent] = useState<Event | undefined>(undefined);
@@ -47,6 +49,25 @@ export default function OrderDetailPage() {
           ]);
           setEvent(eventData);
           setTickets(ticketsData);
+
+          // Check eligibility + existing refund requests in parallel
+          const [, eligibility] = await Promise.all([
+            (async () => {
+              try {
+                const { apiRequest } = await import('@/modules/shared-common/utils/api');
+                const refundReqs = await apiRequest(`/v1/orders/${orderData.id}/refund-requests`) as RefundRequestItem[];
+                if (Array.isArray(refundReqs) && refundReqs.length > 0) {
+                  const statuses = refundReqs.map((r) => r.status.toUpperCase());
+                  if (statuses.includes('APPROVED')) setExistingRefundStatus('Approved');
+                  else if (statuses.includes('PENDING_REVIEW')) setExistingRefundStatus('Pending Review');
+                  else if (statuses.includes('REJECTED')) setExistingRefundStatus('Rejected');
+                  else if (statuses.includes('PROCESSING')) setExistingRefundStatus('Processing');
+                }
+              } catch { /* ignore */ }
+            })(),
+            getRefundEligibility(orderData.id).catch(() => null),
+          ]);
+          if (eligibility) setRefundEligibility(eligibility);
         }
       } catch (error) {
         console.error('Failed to fetch order data:', error);
@@ -97,7 +118,14 @@ export default function OrderDetailPage() {
   const eventDate = event ? new Date(event.startDate || event.date) : new Date();
   const isPastEvent = eventDate < new Date();
   const orderStatusLower = order.status?.toLowerCase();
-  const canRequestRefund = (orderStatusLower === 'completed' || orderStatusLower === 'confirmed') && !isPastEvent && !refundRequested;
+  const hasActiveRefund = existingRefundStatus === 'Pending Review' || existingRefundStatus === 'Approved' || existingRefundStatus === 'Processing';
+  // Use API eligibility if available, fall back to local checks
+  const isEligibleByApi = refundEligibility ? refundEligibility.eligible : true;
+  const canRequestRefund = (orderStatusLower === 'completed' || orderStatusLower === 'confirmed')
+    && !isPastEvent
+    && !refundRequested
+    && !hasActiveRefund
+    && isEligibleByApi;
 
   // Get ticket type info from order items
   // ticket.ticketTypeId may be undefined (not in TicketResponse), so also match by name
@@ -119,10 +147,11 @@ export default function OrderDetailPage() {
   const handleRefundRequest = async () => {
     setIsRequestingRefund(true);
     try {
-      await refundOrder(order.id);
+      await refundOrder(order.id, 'Customer refund request');
       setRefundRequested(true);
     } catch (error) {
       console.error('Failed to request refund:', error);
+      alert('Unable to submit refund request. Please try again or contact support.');
     } finally {
       setIsRequestingRefund(false);
     }
@@ -279,7 +308,15 @@ export default function OrderDetailPage() {
                 disabled={isRequestingRefund}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
-                {isRequestingRefund ? 'Processing...' : '💰 Request Refund'}
+                {isRequestingRefund ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Submitting...
+                  </>
+                ) : '💰 Request Refund'}
               </button>
             )}
           </div>
@@ -287,9 +324,59 @@ export default function OrderDetailPage() {
         
         {refundRequested && (
           <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-green-700 dark:text-green-400 text-sm">
-              ✓ Refund request submitted successfully. You will be notified once it's processed.
+            <p className="text-green-700 dark:text-green-400 text-sm font-medium">
+              ✓ Refund request submitted successfully!
             </p>
+            <p className="text-green-600 dark:text-green-500 text-xs mt-1">
+              The organizer will review your request and you will be notified of the decision.
+            </p>
+          </div>
+        )}
+        {!refundRequested && existingRefundStatus && (
+          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2">
+            <span className="text-blue-700 dark:text-blue-400 text-sm">
+              💰 Refund Request: <span className="font-semibold">{existingRefundStatus}</span>
+            </span>
+          </div>
+        )}
+        {/* Refund eligibility info */}
+        {!refundRequested && !existingRefundStatus && refundEligibility && (
+          <div className={`mt-4 p-4 rounded-lg border text-sm flex items-start gap-2 ${
+            refundEligibility.eligible
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+              : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+          }`}>
+            <span className="text-lg leading-none">
+              {refundEligibility.eligible ? '✅' : '⚠️'}
+            </span>
+            <div>
+              {refundEligibility.eligible ? (
+                <>
+                  <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                    Refund available
+                  </span>
+                  {refundEligibility.deadlineDate && (
+                    <span className="text-emerald-700 dark:text-emerald-400">
+                      {' '}until{' '}
+                      <span className="font-semibold">
+                        {new Date(refundEligibility.deadlineDate).toLocaleDateString('en-US', {
+                          month: 'long', day: 'numeric', year: 'numeric'
+                        })}
+                      </span>
+                    </span>
+                  )}
+                  {refundEligibility.refundPercentage != null && (
+                    <span className="text-emerald-700 dark:text-emerald-400">
+                      {' '}· <span className="font-semibold">{refundEligibility.refundPercentage}% refund</span>
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="font-medium text-amber-800 dark:text-amber-300">
+                  {refundEligibility.reason || 'Refund not available for this order'}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
