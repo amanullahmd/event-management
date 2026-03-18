@@ -51,11 +51,13 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
         if (isInitialLoad) setLoading(true);
         else setIsLoadingMore(true);
 
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
         const response = await fetch(
-          `/api/recommendations?limit=${BATCH_SIZE}&offset=${pageOffset}`,
+          `${backendUrl}/api/recommendations?limit=${BATCH_SIZE}&offset=${pageOffset}`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -65,7 +67,7 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
         }
 
         const data = await response.json();
-        const newEvents = data.events || [];
+        const newEvents = data.recommendations || data.events || [];
 
         if (isInitialLoad) {
           setEvents(newEvents);
@@ -143,11 +145,13 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
 
   const trackInteraction = async (eventId: string, type: 'VIEW' | 'CLICK' | 'REGISTER' | 'DISMISS') => {
     try {
-      await fetch('/api/recommendations/feedback', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      await fetch(`${backendUrl}/api/recommendations/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           eventId,

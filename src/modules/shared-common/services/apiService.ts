@@ -250,6 +250,25 @@ export async function createOrder(order: Partial<Order>): Promise<Order> {
   });
 }
 
+// ─── Promo Code API ──────────────────────────────────────────────────────────
+
+export interface PromoValidationResult {
+  valid: boolean;
+  message?: string;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue?: number;
+  discountAmount?: number;
+}
+
+export async function validatePromoCode(
+  code: string,
+  eventId?: string
+): Promise<PromoValidationResult> {
+  const params = new URLSearchParams({ code });
+  if (eventId) params.append('eventId', eventId);
+  return apiRequest(`/checkout/validate-promo-code?${params.toString()}`);
+}
+
 // ─── Tickets API ────────────────────────────────────────────────────────────
 
 /** Get current user's tickets (backend auto-filters by JWT) */

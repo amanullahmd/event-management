@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiPut, apiGet } from '@/modules/shared-common/utils/api';
 import ChangePasswordModal from '@/modules/authentication/components/ChangePasswordModal';
+import DeleteAccountModal from '@/modules/authentication/components/DeleteAccountModal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Button } from '@/modules/shared-common/components/ui/button';
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
   
   const [profile, setProfile] = useState<CustomerProfile>({
@@ -379,6 +381,21 @@ export default function ProfilePage() {
                 Change Password
               </Button>
             </div>
+
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Permanently delete your account and all associated data. This action cannot be undone.
+                Your personal data will be anonymized in compliance with GDPR regulations.
+              </p>
+              <Button
+                onClick={() => setShowDeleteAccountModal(true)}
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                Delete Account
+              </Button>
+            </div>
           </TabsContent>
 
           <TabsContent value="preferences" className="p-6 space-y-6">
@@ -402,6 +419,11 @@ export default function ProfilePage() {
           setChangePasswordSuccess(true);
           setTimeout(() => setChangePasswordSuccess(false), 3000);
         }}
+      />
+
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        onClose={() => setShowDeleteAccountModal(false)}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/modules/authentication/context/AuthContext";
 import { CartProvider } from "@/modules/payment-processing/context/CartContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 import ToastContainer from "@/modules/shared-common/components/shared/ToastContainer";
+import CookieConsentBanner from "@/modules/compliance/components/CookieConsentBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -89,6 +90,7 @@ export default function RootLayout({
                 <div id="main-content" tabIndex={-1}>
                   {children}
                 </div>
+                <CookieConsentBanner />
               </ToastContainer>
             </CartProvider>
           </AuthProvider>

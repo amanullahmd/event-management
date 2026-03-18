@@ -25,7 +25,8 @@ export const OrganizerProfilePage: React.FC<OrganizerProfilePageProps> = ({
   organizerId: propOrganizerId,
 }) => {
   const params = useParams();
-  const organizerId = propOrganizerId || (params?.organizerId as string);
+  // Route uses [id] segment — support both param names
+  const organizerId = propOrganizerId || (params?.id as string) || (params?.organizerId as string);
 
   const [profile, setProfile] = useState<OrganizerTrustProfile | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
@@ -39,23 +40,20 @@ export const OrganizerProfilePage: React.FC<OrganizerProfilePageProps> = ({
         setLoading(true);
         setError(null);
 
-        // Fetch organizer profile
+        // Fetch organizer profile (required — failure is fatal)
         const profileData = await apiGet<OrganizerTrustProfile>(
-          `/organizers/${organizerId}/profile`
+          `/v1/organizers/${organizerId}/profile`
         );
         setProfile(profileData);
 
-        // Fetch performance metrics
-        const metricsData = await apiGet<PerformanceMetrics>(
-          `/organizers/${organizerId}/metrics`
-        );
-        setMetrics(metricsData);
+        // Fetch metrics and visibility settings independently — non-fatal if missing
+        const [metricsResult, settingsResult] = await Promise.allSettled([
+          apiGet<PerformanceMetrics>(`/v1/organizers/${organizerId}/metrics`),
+          apiGet<VisibilitySettings>(`/v1/organizers/${organizerId}/visibility-settings`),
+        ]);
 
-        // Fetch visibility settings
-        const settingsData = await apiGet<VisibilitySettings>(
-          `/organizers/${organizerId}/visibility-settings`
-        );
-        setVisibilitySettings(settingsData);
+        if (metricsResult.status === 'fulfilled') setMetrics(metricsResult.value);
+        if (settingsResult.status === 'fulfilled') setVisibilitySettings(settingsResult.value);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load organizer profile';
         setError(errorMessage);
@@ -98,17 +96,21 @@ export const OrganizerProfilePage: React.FC<OrganizerProfilePageProps> = ({
         {/* Profile Header */}
         <Card className="mb-8 p-8">
           <div className="flex items-start gap-6">
-            {profile.profilePictureUrl && (
+            {profile.profilePictureUrl ? (
               <img
                 src={profile.profilePictureUrl}
-                alt={profile.name}
+                alt={profile.organizerName || profile.name || 'Organizer'}
                 loading="lazy"
                 className="w-24 h-24 rounded-full object-cover"
               />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
+                {(profile.organizerName || profile.name || 'O').charAt(0).toUpperCase()}
+              </div>
             )}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{profile.name}</h1>
+                <h1 className="text-3xl font-bold">{profile.organizerName || profile.name || 'Organizer'}</h1>
                 {profile.verificationBadgeDisplayed && (
                   <Badge className="bg-blue-500 text-white">Verified</Badge>
                 )}

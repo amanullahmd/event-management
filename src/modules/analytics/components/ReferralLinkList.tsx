@@ -46,8 +46,11 @@ export const ReferralLinkList: React.FC<ReferralLinkListProps> = ({ eventId, ref
     setError('');
 
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       const response = await fetch(
-        `/api/events/${eventId}/referral-links?sortBy=${sortBy}&order=${order}`
+        `${backendUrl}/api/events/${eventId}/referral-links?sortBy=${sortBy}&order=${order}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (!response.ok) {
@@ -161,7 +164,7 @@ export const ReferralLinkList: React.FC<ReferralLinkListProps> = ({ eventId, ref
                     <TableCell>{link.totalClicks}</TableCell>
                     <TableCell>{link.totalConversions}</TableCell>
                     <TableCell>{link.conversionRate}</TableCell>
-                    <TableCell>${link.totalRevenue.toFixed(2)}</TableCell>
+                    <TableCell>${(Number(link.totalRevenue) || 0).toFixed(2)}</TableCell>
                     <TableCell>
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${

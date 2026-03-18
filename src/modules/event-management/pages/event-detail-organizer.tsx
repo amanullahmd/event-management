@@ -7,6 +7,10 @@ import { Button } from '@/modules/shared-common/components/ui/button';
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-common/components/ui/tabs';
 import { EventStatusSection } from '@/modules/event-management/components/EventStatusSection';
+import RevenueOptimizationDashboard from '@/modules/event-management/components/RevenueOptimizationDashboard';
+import EventAnnouncementPanel from '@/modules/event-management/components/EventAnnouncementPanel';
+import { ReferralLinkGenerationForm } from '@/modules/analytics/components/ReferralLinkGenerationForm';
+import { ReferralLinkList } from '@/modules/analytics/components/ReferralLinkList';
 import Link from 'next/link';
 import type { Event } from '@/lib/types';
 
@@ -21,6 +25,7 @@ export default function EventDetailsPage() {
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [referralRefreshTrigger, setReferralRefreshTrigger] = useState(0);
 
   // Fetch event, ticket types and orders
   useEffect(() => {
@@ -227,6 +232,15 @@ export default function EventDetailsPage() {
           <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
             Analytics
           </TabsTrigger>
+          <TabsTrigger value="revenue" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+            Revenue Tools
+          </TabsTrigger>
+          <TabsTrigger value="communication" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+            Announcements
+          </TabsTrigger>
+          <TabsTrigger value="referrals" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600">
+            Referrals
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="p-6 space-y-6">
@@ -400,6 +414,56 @@ export default function EventDetailsPage() {
             </Link>{' '}
             for detailed insights.
           </p>
+        </TabsContent>
+
+        {/* KAN-130: Revenue Optimization Tools */}
+        <TabsContent value="revenue" className="p-6">
+          <div className="mb-4">
+            <h3 className="font-semibold text-slate-900 dark:text-white">Revenue Optimization</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Analyze revenue performance, simulate price changes, and get dynamic pricing recommendations.
+            </p>
+          </div>
+          <RevenueOptimizationDashboard
+            eventId={event.id}
+            ticketTypes={ticketTypes.map((tt) => ({
+              id: tt.id,
+              name: tt.name,
+              price: tt.price,
+              quantity: tt.quantity,
+              sold: tt.sold,
+            }))}
+          />
+        </TabsContent>
+
+        {/* KAN-164: In-event Communication */}
+        <TabsContent value="communication" className="p-6">
+          <EventAnnouncementPanel
+            eventId={event.id}
+            eventTitle={event.title || event.name || 'this event'}
+          />
+        </TabsContent>
+
+        {/* KAN-140/141: Referral Links */}
+        <TabsContent value="referrals" className="p-6 space-y-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white">Referral Links</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Generate shareable referral links to track ticket sales from promoters and partners.
+              </p>
+            </div>
+          </div>
+          <ReferralLinkGenerationForm
+            eventId={event.id}
+            onLinkGenerated={() => setReferralRefreshTrigger(prev => prev + 1)}
+          />
+          <ReferralLinkList eventId={event.id} refreshTrigger={referralRefreshTrigger} />
         </TabsContent>
       </Tabs>
     </div>

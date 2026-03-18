@@ -7,7 +7,7 @@ import { Card } from '@/modules/shared-common/components/ui/card';
 import { Input } from '@/modules/shared-common/components/ui/input';
 import { useCart } from '@/modules/payment-processing/context/CartContext';
 import { useAuth } from '@/modules/authentication/context/AuthContext';
-import { getEventById, createOrder } from '@/modules/shared-common/services/apiService';
+import { getEventById, createOrder, validatePromoCode } from '@/modules/shared-common/services/apiService';
 import type { Event } from '@/modules/shared-common/services/apiService';
 import {
   ShoppingCart,
@@ -82,6 +82,12 @@ export default function CheckoutPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
+
+  // Promo code state
+  const [promoInput, setPromoInput] = useState('');
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discountAmount: number; label: string } | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
   // Load event details for cart items
   useEffect(() => {
@@ -171,6 +177,7 @@ export default function CheckoutPage() {
         eventId: items[0]?.eventId || '',
         items: orderItems,
         paymentMethod,
+        ...(promoApplied ? { promoCode: promoApplied.code } : {}),
       } as any);
 
       setOrderId(order.id);
@@ -183,6 +190,44 @@ export default function CheckoutPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoError('');
+    setIsValidatingPromo(true);
+    try {
+      const eventId = items[0]?.eventId;
+      const result = await validatePromoCode(promoInput.trim().toUpperCase(), eventId);
+      if (result.valid) {
+        const subtotal = getSubtotal();
+        let discount = 0;
+        if (result.discountType === 'PERCENTAGE' && result.discountValue) {
+          discount = (subtotal * result.discountValue) / 100;
+        } else if (result.discountAmount) {
+          discount = result.discountAmount;
+        } else if (result.discountValue) {
+          discount = result.discountValue;
+        }
+        discount = Math.min(discount, subtotal);
+        const label = result.discountType === 'PERCENTAGE'
+          ? `${result.discountValue}% off`
+          : `$${discount.toFixed(2)} off`;
+        setPromoApplied({ code: promoInput.trim().toUpperCase(), discountAmount: discount, label });
+        setPromoInput('');
+      } else {
+        setPromoError(result.message || 'Invalid or expired promo code.');
+      }
+    } catch {
+      setPromoError('Could not validate promo code. Please try again.');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const getDiscountedTotal = () => {
+    const raw = getTotal() - (promoApplied?.discountAmount || 0);
+    return Math.max(raw, 0);
   };
 
   const formatDate = (date: Date | string) => {
@@ -534,7 +579,7 @@ export default function CheckoutPage() {
                     }`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Processing...' : paymentMethod === 'paypal' ? `Pay with PayPal - $${getTotal().toFixed(2)}` : `Pay with Card - $${getTotal().toFixed(2)}`}
+                    {isSubmitting ? 'Processing...' : paymentMethod === 'paypal' ? `Pay with PayPal - $${getDiscountedTotal().toFixed(2)}` : `Pay with Card - $${getDiscountedTotal().toFixed(2)}`}
                   </Button>
                 </div>
               </form>
@@ -641,9 +686,61 @@ export default function CheckoutPage() {
                     <span>Service Fee (10%)</span>
                     <span className="font-medium text-gray-900 dark:text-white">${getFees().toFixed(2)}</span>
                   </div>
+
+                  {/* Promo Code Input */}
+                  {!promoApplied ? (
+                    <div className="pt-1">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Promo Code
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={promoInput}
+                          onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(''); }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
+                          placeholder="Enter code"
+                          className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 uppercase"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleApplyPromo}
+                          disabled={isValidatingPromo || !promoInput.trim()}
+                          className="bg-violet-600 hover:bg-violet-700 text-white text-xs px-3"
+                        >
+                          {isValidatingPromo ? '...' : 'Apply'}
+                        </Button>
+                      </div>
+                      {promoError && <p className="text-xs text-red-500 mt-1">{promoError}</p>}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span className="font-mono font-semibold">{promoApplied.code}</span>
+                        <span className="text-xs">({promoApplied.label})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPromoApplied(null)}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {promoApplied && (
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                      <span>Discount</span>
+                      <span className="font-medium">-${promoApplied.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+
                   <div className="border-t border-gray-200 dark:border-slate-600 pt-3 flex justify-between">
                     <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
-                    <span className="text-lg font-bold text-violet-600 dark:text-violet-400">${getTotal().toFixed(2)}</span>
+                    <span className="text-lg font-bold text-violet-600 dark:text-violet-400">${getDiscountedTotal().toFixed(2)}</span>
                   </div>
                 </div>
 

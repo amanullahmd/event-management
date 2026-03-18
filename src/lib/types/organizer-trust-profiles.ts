@@ -3,9 +3,10 @@
  */
 
 export interface OrganizerTrustProfile {
-  id: string;
+  id?: string;
   organizerId: string;
-  name: string;
+  name?: string;
+  organizerName?: string; // Backend field name
   bio: string;
   profilePictureUrl?: string;
   verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';

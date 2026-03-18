@@ -6,6 +6,7 @@ import { useAuth } from '@/modules/authentication/context/AuthContext';
 import { apiRequest } from '@/modules/shared-common/utils/api';
 import { getEventById } from '@/modules/shared-common/services/apiService';
 import type { Event as EventType } from '@/modules/shared-common/services/apiService';
+import { PersonalizedFeedComponent } from '@/modules/analytics/components/PersonalizedFeedComponent';
 import {
   Ticket,
   Calendar,
@@ -467,6 +468,39 @@ export default function ModernCustomerDashboard() {
               </Link>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Personalized Recommendations Feed */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                <span className="text-xl">✨</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Recommended For You
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Personalized events based on your interests
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/events"
+              className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+            >
+              Browse All Events →
+            </Link>
+          </div>
+        </div>
+        <div className="p-6">
+          <PersonalizedFeedComponent
+            onEventClick={(eventId) => { window.location.href = `/events/${eventId}`; }}
+            onRegister={(eventId) => { window.location.href = `/events/${eventId}`; }}
+          />
         </div>
       </div>
 

@@ -37,10 +37,13 @@ export const ReferralLinkGenerationForm: React.FC<ReferralLinkGenerationFormProp
     setSuccess('');
 
     try {
-      const response = await fetch(`/api/events/${eventId}/referral-links`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const response = await fetch(`${backendUrl}/api/events/${eventId}/referral-links`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           label: label || undefined,

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks';
-import EventCreationForm from '@/modules/event-management/components/EventCreationForm';
+import EventSetupWizard from '@/modules/event-management/components/EventSetupWizard';
 
 /**
  * Event Creation Page
@@ -56,10 +56,10 @@ export default function CreateEventPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <EventCreationForm
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
+      <EventSetupWizard
         onSuccess={(eventId) => {
-          // Event creation was successful, redirect is handled in the form
+          // Event creation was successful, redirect is handled in the wizard
         }}
         onError={(error) => {
           console.error('Event creation error:', error);
