@@ -44,7 +44,8 @@ export default function CheckinPage() {
   const [cameras, setCameras] = useState<{ deviceId: string; label: string }[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const codeReaderRef = useRef<any | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -93,9 +94,9 @@ export default function CheckinPage() {
   }, [selectedEventId]);
 
   const stopCamera = useCallback(() => {
-    if (scannerControlsRef.current) {
-      scannerControlsRef.current.stop();
-      scannerControlsRef.current = null;
+    if (codeReaderRef.current) {
+      try { codeReaderRef.current.reset(); } catch { /* ignore */ }
+      codeReaderRef.current = null;
     }
     setIsCameraActive(false);
     setCameraError(null);
@@ -129,10 +130,11 @@ export default function CheckinPage() {
         return;
       }
 
-      const controls = await codeReader.decodeFromVideoDevice(
+      codeReaderRef.current = codeReader;
+      await codeReader.decodeFromVideoDevice(
         deviceId,
         videoRef.current,
-        (result, err) => {
+        (result) => {
           if (result) {
             const text = result.getText();
             setInputValue(text);
@@ -143,7 +145,6 @@ export default function CheckinPage() {
           }
         }
       );
-      scannerControlsRef.current = controls;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes('Permission') || message.includes('NotAllowed')) {

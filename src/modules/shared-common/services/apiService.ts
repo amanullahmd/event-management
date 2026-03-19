@@ -589,3 +589,442 @@ export async function changePassword(data: {
 }): Promise<any> {
   return apiPost('/auth/change-password', data);
 }
+
+// ─── Organization & Team Management API (KAN-203) ───────────────────────────
+
+export interface Organization {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  ownerName?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  status: string;
+  memberCount: number;
+  members?: OrganizationMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  role: 'OWNER' | 'ADMIN' | 'MANAGER' | 'STAFF' | 'VIEWER';
+  permissions: string;
+  status: string;
+  joinedAt?: string;
+}
+
+export interface OrganizationInvitation {
+  id: string;
+  invitedEmail: string;
+  role: string;
+  invitedAt: string;
+  expiresAt: string;
+  status: string;
+}
+
+export async function createOrganization(data: {
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+}): Promise<Organization> {
+  return apiRequest('/organizations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMyOrganizations(): Promise<Organization[]> {
+  const data = await apiRequest('/organizations');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getOrganization(orgId: string): Promise<Organization> {
+  return apiRequest(`/organizations/${orgId}`);
+}
+
+export async function updateOrganization(orgId: string, data: {
+  name?: string;
+  description?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+}): Promise<Organization> {
+  return apiRequest(`/organizations/${orgId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteOrganization(orgId: string): Promise<void> {
+  await apiRequest(`/organizations/${orgId}`, { method: 'DELETE' });
+}
+
+export async function getOrganizationMembers(orgId: string): Promise<OrganizationMember[]> {
+  const data = await apiRequest(`/organizations/${orgId}/members`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function updateMemberRole(orgId: string, memberId: string, role: string): Promise<OrganizationMember> {
+  return apiRequest(`/organizations/${orgId}/members/${memberId}/role`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function removeMember(orgId: string, memberId: string): Promise<void> {
+  await apiRequest(`/organizations/${orgId}/members/${memberId}`, { method: 'DELETE' });
+}
+
+export async function inviteMember(orgId: string, data: {
+  email: string;
+  role?: string;
+}): Promise<{ invitationId: string; invitationToken: string; invitedEmail: string; role: string; expiresAt: string; message: string }> {
+  return apiRequest(`/organizations/${orgId}/invitations`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getPendingInvitations(orgId: string): Promise<OrganizationInvitation[]> {
+  const data = await apiRequest(`/organizations/${orgId}/invitations`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function cancelInvitation(orgId: string, invitationId: string): Promise<void> {
+  await apiRequest(`/organizations/${orgId}/invitations/${invitationId}`, { method: 'DELETE' });
+}
+
+export async function acceptInvitation(token: string): Promise<OrganizationMember> {
+  return apiRequest(`/organizations/invitations/accept/${token}`, { method: 'POST' });
+}
+
+// ─── Ticket Resale Marketplace API (KAN-207) ────────────────────────────────
+
+export interface ResaleListing {
+  id: string;
+  ticketId: string;
+  ticketNumber?: string;
+  eventId: string;
+  eventTitle?: string;
+  eventDate?: string;
+  eventLocation?: string;
+  sellerId: string;
+  sellerName?: string;
+  originalPrice: number;
+  resalePrice: number;
+  platformFee: number;
+  sellerPayout: number;
+  currency: string;
+  status: 'active' | 'sold' | 'cancelled' | 'expired';
+  sellerNote?: string;
+  ticketTypeName?: string;
+  createdAt: string;
+  soldAt?: string;
+}
+
+export async function createResaleListing(data: {
+  ticketId: string;
+  resalePrice: number;
+  sellerNote?: string;
+}): Promise<ResaleListing> {
+  return apiRequest('/resale/listings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getActiveResaleListings(page = 0, size = 20): Promise<ResaleListing[]> {
+  const data = await apiRequest(`/resale/listings?page=${page}&size=${size}`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getResaleListingsByEvent(eventId: string): Promise<ResaleListing[]> {
+  const data = await apiRequest(`/resale/listings/event/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getMyResaleListings(): Promise<ResaleListing[]> {
+  const data = await apiRequest('/resale/listings/my');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function purchaseResaleListing(listingId: string): Promise<ResaleListing> {
+  return apiRequest(`/resale/listings/${listingId}/purchase`, { method: 'POST' });
+}
+
+export async function cancelResaleListing(listingId: string): Promise<void> {
+  await apiRequest(`/resale/listings/${listingId}`, { method: 'DELETE' });
+}
+
+// ─── Admin Team API (KAN-205/KAN-214) ────────────────────────────────────────
+
+export interface AdminTeamMember {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: 'SUPER_ADMIN' | 'ADMIN_MEMBER';
+  permSupport: boolean;
+  permUsers: boolean;
+  permEvents: boolean;
+  permOrganizers: boolean;
+  permContent: boolean;
+  permAnalytics: boolean;
+  permSettings: boolean;
+  status: string;
+  joinedAt: string;
+}
+
+export async function getAdminTeamMembers(): Promise<AdminTeamMember[]> {
+  const data = await apiRequest('/admin/team');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getMyAdminMembership(): Promise<AdminTeamMember | null> {
+  try {
+    return await apiRequest('/admin/team/me');
+  } catch {
+    return null;
+  }
+}
+
+export async function addAdminTeamMember(data: {
+  userEmail: string;
+  permSupport?: boolean;
+  permUsers?: boolean;
+  permEvents?: boolean;
+  permOrganizers?: boolean;
+  permContent?: boolean;
+  permAnalytics?: boolean;
+  permSettings?: boolean;
+}): Promise<AdminTeamMember> {
+  return apiRequest('/admin/team', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateAdminMemberPermissions(memberId: string, data: {
+  permSupport?: boolean;
+  permUsers?: boolean;
+  permEvents?: boolean;
+  permOrganizers?: boolean;
+  permContent?: boolean;
+  permAnalytics?: boolean;
+  permSettings?: boolean;
+}): Promise<AdminTeamMember> {
+  return apiRequest(`/admin/team/${memberId}/permissions`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function removeAdminTeamMember(memberId: string): Promise<void> {
+  await apiRequest(`/admin/team/${memberId}`, { method: 'DELETE' });
+}
+
+// ─── Support Ticket API (KAN-208/KAN-220) ────────────────────────────────────
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  subject: string;
+  category: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  description: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  messageCount: number;
+  messages?: SupportMessage[];
+  resolvedAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'USER' | 'ADMIN';
+  content: string;
+  internalNote: boolean;
+  createdAt: string;
+}
+
+export async function createSupportTicket(data: {
+  subject: string;
+  category: string;
+  priority?: string;
+  description: string;
+}): Promise<SupportTicket> {
+  return apiRequest('/support/tickets', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getMySupportTickets(): Promise<SupportTicket[]> {
+  const data = await apiRequest('/support/tickets/my');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getAllSupportTickets(): Promise<SupportTicket[]> {
+  const data = await apiRequest('/support/tickets');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getSupportTicket(ticketId: string): Promise<SupportTicket> {
+  return apiRequest(`/support/tickets/${ticketId}`);
+}
+
+export async function sendSupportMessage(ticketId: string, content: string): Promise<SupportMessage> {
+  return apiRequest(`/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function updateSupportTicketStatus(ticketId: string, status: string): Promise<SupportTicket> {
+  return apiRequest(`/support/tickets/${ticketId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function assignSupportTicket(ticketId: string): Promise<SupportTicket> {
+  return apiRequest(`/support/tickets/${ticketId}/assign`, { method: 'PUT', body: '{}' });
+}
+
+export async function getSupportStats(): Promise<Record<string, number>> {
+  return apiRequest('/support/tickets/stats');
+}
+
+// ─── Team Chat API (KAN-204/KAN-212) ─────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  messageType: string;
+  createdAt: string;
+}
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  roomType: string;
+  organizationId?: string;
+  messageCount: number;
+  lastMessage?: ChatMessage;
+  messages: ChatMessage[];
+  createdAt: string;
+}
+
+export async function getOrgChatRoom(organizationId: string, limit = 50): Promise<ChatRoom> {
+  return apiRequest(`/chat/rooms/org/${organizationId}?limit=${limit}`);
+}
+
+export async function initOrgChatRoom(organizationId: string, orgName: string): Promise<ChatRoom> {
+  return apiRequest(`/chat/rooms/org/${organizationId}`, {
+    method: 'POST',
+    body: JSON.stringify({ name: orgName }),
+  });
+}
+
+export async function getAdminChatRoom(limit = 50): Promise<ChatRoom> {
+  return apiRequest(`/chat/rooms/admin?limit=${limit}`);
+}
+
+export async function sendChatMessage(roomId: string, content: string): Promise<ChatMessage> {
+  return apiRequest(`/chat/rooms/${roomId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+// ─── Video Notifications API (KAN-206/KAN-216) ───────────────────────────────
+
+export interface VideoNotification {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  uploaderId: string;
+  uploaderName: string;
+  title: string;
+  description?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  durationSeconds?: number;
+  fileSizeBytes?: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewNote?: string;
+  deliveryCount: number;
+  reviewedAt?: string;
+  deliveredAt?: string;
+  createdAt: string;
+}
+
+export async function uploadVideoNotification(
+  eventId: string,
+  title: string,
+  description: string,
+  videoFile: File
+): Promise<VideoNotification> {
+  const formData = new FormData();
+  formData.append('eventId', eventId);
+  formData.append('title', title);
+  formData.append('description', description);
+  formData.append('video', videoFile);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    : null;
+
+  const response = await fetch(`${API_BASE_URL}/api/video-notifications/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error('Upload failed');
+  return response.json();
+}
+
+export async function getMyVideoNotifications(): Promise<VideoNotification[]> {
+  const data = await apiRequest('/video-notifications/my');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getVideoNotificationsByEvent(eventId: string): Promise<VideoNotification[]> {
+  const data = await apiRequest(`/video-notifications/event/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getAllVideoNotifications(): Promise<VideoNotification[]> {
+  const data = await apiRequest('/video-notifications');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getPendingVideoNotifications(): Promise<VideoNotification[]> {
+  const data = await apiRequest('/video-notifications/pending');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function reviewVideoNotification(
+  videoId: string,
+  status: 'APPROVED' | 'REJECTED',
+  reviewNote?: string
+): Promise<VideoNotification> {
+  return apiRequest(`/video-notifications/${videoId}/review`, {
+    method: 'PUT',
+    body: JSON.stringify({ status, reviewNote }),
+  });
+}
