@@ -47,6 +47,19 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const ROLES = ['ADMIN', 'MANAGER', 'STAFF', 'VIEWER'];
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  ADMIN: 'Full access to everything',
+  MANAGER: 'Manage events & tickets',
+  STAFF: 'Check-in & basic ops',
+  VIEWER: 'Read-only access',
+};
+const ROLE_ICONS: Record<string, string> = {
+  OWNER: '👑',
+  ADMIN: '🛡️',
+  MANAGER: '📋',
+  STAFF: '🎫',
+  VIEWER: '👁️',
+};
 
 export default function TeamsPage() {
   const { user } = useAuth();
@@ -70,6 +83,9 @@ export default function TeamsPage() {
   const [editForm, setEditForm] = useState({ name: '', description: '', websiteUrl: '' });
   const [inviteForm, setInviteForm] = useState({ email: '', role: 'STAFF' });
   const [formLoading, setFormLoading] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancellingInvId, setCancellingInvId] = useState<string | null>(null);
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
 
   // Invitation token display
   const [lastInviteToken, setLastInviteToken] = useState<string | null>(null);
@@ -198,12 +214,15 @@ export default function TeamsPage() {
 
   const handleCancelInvitation = async (invId: string) => {
     if (!selectedOrg) return;
+    setCancellingInvId(invId);
     try {
       await cancelInvitation(selectedOrg.id, invId);
       setInvitations(prev => prev.filter(i => i.id !== invId));
       showSuccess('Invitation cancelled');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to cancel invitation');
+    } finally {
+      setCancellingInvId(null);
     }
   };
 
@@ -211,23 +230,29 @@ export default function TeamsPage() {
 
   const handleRemoveMember = async (memberId: string) => {
     if (!selectedOrg) return;
+    setRemovingId(memberId);
     try {
       await removeMember(selectedOrg.id, memberId);
       setMembers(prev => prev.filter(m => m.id !== memberId));
       showSuccess('Member removed');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to remove member');
+    } finally {
+      setRemovingId(null);
     }
   };
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     if (!selectedOrg) return;
+    setChangingRoleId(memberId);
     try {
       const updated = await updateMemberRole(selectedOrg.id, memberId, newRole);
       setMembers(prev => prev.map(m => m.id === memberId ? updated : m));
-      showSuccess('Role updated');
+      showSuccess(`Role updated to ${newRole}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update role');
+    } finally {
+      setChangingRoleId(null);
     }
   };
 
@@ -242,8 +267,52 @@ export default function TeamsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-7 w-40 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
+            <div className="h-4 w-64 bg-gray-100 dark:bg-slate-800 rounded animate-pulse mt-2" />
+          </div>
+          <div className="h-10 w-40 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            {[1, 2].map(i => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gray-200 dark:bg-slate-700 rounded-lg" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4" />
+                    <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/2" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="lg:col-span-3 space-y-5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-6 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gray-200 dark:bg-slate-700 rounded-xl" />
+                <div className="space-y-2">
+                  <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-48" />
+                  <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-64" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-5 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-3 py-3">
+                  <div className="w-10 h-10 bg-gray-200 dark:bg-slate-700 rounded-full" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/3" />
+                    <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/4" />
+                  </div>
+                  <div className="h-6 bg-gray-100 dark:bg-slate-800 rounded-full w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -447,43 +516,74 @@ export default function TeamsPage() {
 
                 <div className="divide-y divide-gray-50 dark:divide-slate-800">
                   {members.map(member => (
-                    <div key={member.id} className="flex items-center justify-between px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                          {member.userName ? member.userName.charAt(0).toUpperCase() : '?'}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm text-gray-900 dark:text-white">{member.userName || 'Unknown'}</p>
-                            {member.role === 'OWNER' && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
+                    <div key={member.id} className="px-5 py-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            member.role === 'OWNER'
+                              ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white'
+                              : 'bg-gradient-to-br from-slate-400 to-slate-500 text-white'
+                          }`}>
+                            {member.userName ? member.userName.charAt(0).toUpperCase() : '?'}
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{member.userEmail}</p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm text-gray-900 dark:text-white">{member.userName || 'Unknown'}</p>
+                              {member.role === 'OWNER' && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{member.userEmail}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {isOwner && member.role !== 'OWNER' ? (
-                          <select
-                            value={member.role}
-                            onChange={e => handleRoleChange(member.id, e.target.value)}
-                            className="text-xs border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 cursor-pointer"
-                          >
-                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
-                        ) : (
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ROLE_COLORS[member.role] || ROLE_COLORS.STAFF}`}>
-                            {member.role}
-                          </span>
-                        )}
                         {isOwner && member.role !== 'OWNER' && (
                           <button
                             onClick={() => handleRemoveMember(member.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Remove member"
+                            disabled={removingId === member.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
                           >
-                            <UserMinus className="w-4 h-4" />
+                            {removingId === member.id ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <UserMinus className="w-3 h-3" />
+                            )}
+                            Remove
                           </button>
                         )}
                       </div>
+                      {/* Role buttons - click to change */}
+                      {isOwner && member.role !== 'OWNER' ? (
+                        <div className="grid grid-cols-4 gap-2">
+                          {ROLES.map(r => {
+                            const isActive = member.role === r;
+                            const isChanging = changingRoleId === member.id;
+                            return (
+                              <button
+                                key={r}
+                                onClick={() => !isActive && handleRoleChange(member.id, r)}
+                                disabled={isActive || isChanging}
+                                className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-xs font-medium transition-all border ${
+                                  isActive
+                                    ? `${ROLE_COLORS[r]} border-current shadow-sm`
+                                    : 'bg-gray-50 dark:bg-slate-800/50 text-gray-400 dark:text-slate-500 border-transparent hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300 cursor-pointer'
+                                } disabled:cursor-default`}
+                                title={ROLE_DESCRIPTIONS[r]}
+                              >
+                                <span className="text-base">{ROLE_ICONS[r]}</span>
+                                <span>{r}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 ml-13">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${ROLE_COLORS[member.role] || ROLE_COLORS.STAFF}`}>
+                            <span>{ROLE_ICONS[member.role]}</span>
+                            {member.role}
+                          </span>
+                          {member.role === 'OWNER' && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">Full access</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -511,9 +611,10 @@ export default function TeamsPage() {
                         {isOwner && (
                           <button
                             onClick={() => handleCancelInvitation(inv.id)}
-                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            disabled={cancellingInvId === inv.id}
+                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                           >
-                            Cancel
+                            {cancellingInvId === inv.id ? 'Cancelling...' : 'Cancel'}
                           </button>
                         )}
                       </div>

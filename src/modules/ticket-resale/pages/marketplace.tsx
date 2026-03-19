@@ -5,7 +5,6 @@ import { useAuth } from '@/modules/authentication/context/AuthContext';
 import {
   getActiveResaleListings,
   getMyResaleListings,
-  getMyResaleListings as getSellerListings,
   createResaleListing,
   purchaseResaleListing,
   cancelResaleListing,
@@ -73,6 +72,11 @@ export default function MarketplacePage() {
   // Purchase confirm
   const [purchaseTarget, setPurchaseTarget] = useState<ResaleListing | null>(null);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<{ ticketNumber: string; eventTitle: string; price: number } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
+  const [priceError, setPriceError] = useState('');
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -105,6 +109,17 @@ export default function MarketplacePage() {
 
   const handleSell = async () => {
     if (!sellForm.ticketId || !sellForm.resalePrice) return;
+    const price = parseFloat(sellForm.resalePrice);
+    if (isNaN(price) || price <= 0) {
+      setPriceError('Price must be greater than $0.00');
+      return;
+    }
+    const maxPrice = selectedTicket ? (selectedTicket.price || selectedTicket.priceCents / 100 || Infinity) * 1.1 : Infinity;
+    if (price > maxPrice) {
+      setPriceError(`Max allowed: ${formatCurrency(maxPrice)} (110% of original)`);
+      return;
+    }
+    setPriceError('');
     setFormLoading(true);
     try {
       const listing = await createResaleListing({
@@ -134,8 +149,12 @@ export default function MarketplacePage() {
     try {
       const sold = await purchaseResaleListing(purchaseTarget.id);
       setListings(prev => prev.filter(l => l.id !== purchaseTarget.id));
+      setPurchaseSuccess({
+        ticketNumber: sold.ticketNumber || purchaseTarget.ticketNumber || '',
+        eventTitle: purchaseTarget.eventTitle || 'Event',
+        price: purchaseTarget.resalePrice,
+      });
       setPurchaseTarget(null);
-      showSuccess(`You purchased ticket ${sold.ticketNumber || ''} successfully!`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to complete purchase');
       setPurchaseTarget(null);
@@ -147,6 +166,7 @@ export default function MarketplacePage() {
   // ─── Cancel Listing ───────────────────────────────────────────────────────
 
   const handleCancel = async (listingId: string) => {
+    setCancellingId(listingId);
     try {
       await cancelResaleListing(listingId);
       setMyListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' as const } : l));
@@ -154,6 +174,8 @@ export default function MarketplacePage() {
       showSuccess('Listing cancelled. Your ticket is yours again.');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to cancel listing');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -163,10 +185,51 @@ export default function MarketplacePage() {
     setSellForm(f => ({ ...f, ticketId }));
   };
 
+  // Filter and sort browse listings
+  const filteredListings = listings
+    .filter(l => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (l.eventTitle || '').toLowerCase().includes(q) ||
+        (l.ticketTypeName || '').toLowerCase().includes(q) ||
+        (l.sellerName || '').toLowerCase().includes(q) ||
+        (l.eventLocation || '').toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (sortBy === 'price-low') return (a.resalePrice || 0) - (b.resalePrice || 0);
+      if (sortBy === 'price-high') return (b.resalePrice || 0) - (a.resalePrice || 0);
+      return 0; // newest = default API order
+    });
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-7 w-56 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
+            <div className="h-4 w-72 bg-gray-100 dark:bg-slate-800 rounded animate-pulse mt-2" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden animate-pulse">
+              <div className="h-2 bg-gray-200 dark:bg-slate-700" />
+              <div className="p-5 space-y-3">
+                <div className="h-5 bg-gray-200 dark:bg-slate-700 rounded w-3/4" />
+                <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/2" />
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-3">
+                  <div className="h-7 bg-gray-200 dark:bg-slate-700 rounded w-1/3" />
+                  <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/2 mt-2" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded w-24" />
+                  <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-20" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -253,19 +316,53 @@ export default function MarketplacePage() {
       {/* Browse Tab */}
       {tab === 'browse' && (
         <>
-          {listings.length === 0 ? (
+          {/* Search & Sort Bar */}
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by event, type, seller..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 outline-none"
+              />
+            </div>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as 'newest' | 'price-low' | 'price-high')}
+              className="px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+            >
+              <option value="newest">Newest</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+            <button
+              onClick={loadData}
+              className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+              title="Refresh listings"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {filteredListings.length === 0 ? (
             <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800">
               <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Store className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Resale Listings</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {searchQuery ? 'No Matching Listings' : 'No Resale Listings'}
+              </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                No tickets are currently listed for resale. Check back later or list your own.
+                {searchQuery
+                  ? 'Try adjusting your search terms or clear the filter.'
+                  : 'No tickets are currently listed for resale. Check back later or list your own.'}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {listings.map(listing => (
+              {filteredListings.map(listing => (
                 <div key={listing.id}
                   className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden hover:shadow-lg hover:shadow-violet-500/5 transition-shadow">
                   {/* Card top gradient */}
@@ -426,9 +523,10 @@ export default function MarketplacePage() {
                         {listing.status === 'active' && (
                           <button
                             onClick={() => handleCancel(listing.id)}
-                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            disabled={cancellingId === listing.id}
+                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                           >
-                            Cancel
+                            {cancellingId === listing.id ? 'Cancelling...' : 'Cancel'}
                           </button>
                         )}
                         {listing.status === 'sold' && (
@@ -494,17 +592,21 @@ export default function MarketplacePage() {
                       min="0.01"
                       step="0.01"
                       value={sellForm.resalePrice}
-                      onChange={e => setSellForm(f => ({ ...f, resalePrice: e.target.value }))}
+                      onChange={e => { setSellForm(f => ({ ...f, resalePrice: e.target.value })); setPriceError(''); }}
                       placeholder="0.00"
                       className="w-full pl-8 pr-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 outline-none"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                    Max allowed: 110% of original price · Platform fee: 5%
-                    {sellForm.resalePrice && (
-                      <> · Your payout: <strong className="text-green-600">{formatCurrency(parseFloat(sellForm.resalePrice) * 0.95)}</strong></>
-                    )}
-                  </p>
+                  {priceError ? (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{priceError}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                      Max allowed: 110% of original price · Platform fee: 5%
+                      {sellForm.resalePrice && (
+                        <> · Your payout: <strong className="text-green-600">{formatCurrency(parseFloat(sellForm.resalePrice) * 0.95)}</strong></>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -534,6 +636,38 @@ export default function MarketplacePage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Purchase Success Modal ──────────────────────────────────────────── */}
+      {purchaseSuccess && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Purchase Complete!</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Your ticket for <strong>{purchaseSuccess.eventTitle}</strong> has been transferred to your account.
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mb-4">
+              Ticket #{purchaseSuccess.ticketNumber}
+            </p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mb-6">
+              {formatCurrency(purchaseSuccess.price)}
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setPurchaseSuccess(null)}>
+                Continue Browsing
+              </Button>
+              <Button
+                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
+                onClick={() => { setPurchaseSuccess(null); window.location.href = '/dashboard/tickets'; }}
+              >
+                View My Tickets
+              </Button>
+            </div>
           </div>
         </div>
       )}

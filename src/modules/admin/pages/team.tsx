@@ -9,7 +9,7 @@ import {
   removeAdminTeamMember,
   AdminTeamMember,
 } from '@/modules/shared-common/services/apiService';
-import { ShieldCheck, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, X, Loader2 } from 'lucide-react';
 
 const PERMISSIONS = [
   { key: 'permSupport', label: 'Support', description: 'Manage support tickets' },
@@ -31,11 +31,14 @@ export default function AdminTeamPage() {
   const [members, setMembers] = useState<AdminTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editPerms, setEditPerms] = useState<Record<PermKey, boolean>>(defaultPerms());
   const [addForm, setAddForm] = useState({ userEmail: '', ...defaultPerms() });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [togglingPerm, setTogglingPerm] = useState<string | null>(null); // "memberId:permKey"
+
+  const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(''), 3500); };
+  const showError = (msg: string) => { setError(msg); setTimeout(() => setError(''), 5000); };
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -43,7 +46,7 @@ export default function AdminTeamPage() {
       const data = await getAdminTeamMembers();
       setMembers(data);
     } catch {
-      setError('Failed to load team members');
+      showError('Failed to load team members');
     } finally {
       setLoading(false);
     }
@@ -53,6 +56,10 @@ export default function AdminTeamPage() {
 
   const handleAdd = async () => {
     if (!addForm.userEmail.trim()) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addForm.userEmail.trim())) {
+      showError('Please enter a valid email address');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -60,30 +67,35 @@ export default function AdminTeamPage() {
       setShowAddModal(false);
       setAddForm({ userEmail: '', ...defaultPerms() });
       await loadMembers();
+      showSuccess('Team member added successfully');
     } catch {
-      setError('Failed to add member. User may already be in the team.');
+      showError('Failed to add member. User may already be in the team.');
     } finally {
       setSaving(false);
     }
   };
 
-  const startEdit = (member: AdminTeamMember) => {
-    setEditingId(member.id);
-    setEditPerms(
-      Object.fromEntries(PERMISSIONS.map((p) => [p.key, member[p.key]])) as Record<PermKey, boolean>
-    );
-  };
-
-  const handleSavePerms = async (memberId: string) => {
-    setSaving(true);
+  const togglePermission = async (member: AdminTeamMember, permKey: PermKey) => {
+    const toggling = `${member.id}:${permKey}`;
+    setTogglingPerm(toggling);
+    const updatedPerms = Object.fromEntries(
+      PERMISSIONS.map((p) => [p.key, p.key === permKey ? !member[p.key] : member[p.key]])
+    ) as Record<PermKey, boolean>;
+    // Optimistic update
+    setMembers(prev => prev.map(m =>
+      m.id === member.id ? { ...m, [permKey]: !member[permKey] } : m
+    ));
     try {
-      await updateAdminMemberPermissions(memberId, editPerms);
-      setEditingId(null);
-      await loadMembers();
+      await updateAdminMemberPermissions(member.id, updatedPerms);
+      showSuccess(`${PERMISSIONS.find(p => p.key === permKey)?.label} ${updatedPerms[permKey] ? 'enabled' : 'disabled'}`);
     } catch {
-      setError('Failed to update permissions');
+      // Revert optimistic update
+      setMembers(prev => prev.map(m =>
+        m.id === member.id ? { ...m, [permKey]: member[permKey] } : m
+      ));
+      showError('Failed to update permission');
     } finally {
-      setSaving(false);
+      setTogglingPerm(null);
     }
   };
 
@@ -92,12 +104,13 @@ export default function AdminTeamPage() {
     try {
       await removeAdminTeamMember(memberId);
       await loadMembers();
+      showSuccess('Team member removed');
     } catch {
-      setError('Cannot remove this member');
+      showError('Cannot remove this member');
     }
   };
 
-  const isSuperAdmin = members.find((m) => m.role === 'SUPER_ADMIN')?.userId === user?.id;
+  const isSuperAdmin = members.some((m) => m.role === 'SUPER_ADMIN' && (m.userId === user?.id || m.userEmail === user?.email));
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4">
@@ -128,6 +141,11 @@ export default function AdminTeamPage() {
             {error}
           </div>
         )}
+        {success && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4" /> {success}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -146,120 +164,110 @@ export default function AdminTeamPage() {
         {/* Team Members Table */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading team members...</div>
+            <div className="p-4 space-y-3 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
+                    <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/4" />
+                  </div>
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map(j => <div key={j} className="w-4 h-4 bg-slate-100 dark:bg-slate-800 rounded" />)}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : members.length === 0 ? (
             <div className="p-12 text-center">
               <ShieldCheck className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
               <p className="text-slate-500 dark:text-slate-400">No admin team members yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">Member</th>
-                    <th className="text-left px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">Role</th>
-                    {PERMISSIONS.map((p) => (
-                      <th key={p.key} className="text-center px-2 py-3 text-slate-600 dark:text-slate-300 font-medium text-xs">
-                        {p.label}
-                      </th>
-                    ))}
-                    {isSuperAdmin && (
-                      <th className="text-right px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">Actions</th>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {members.map((member) => (
+                <div key={member.id} className="p-5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  {/* Member info row */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                        member.role === 'SUPER_ADMIN'
+                          ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white'
+                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {member.userName ? member.userName.charAt(0).toUpperCase() : '?'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                          {member.userName}
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            member.role === 'SUPER_ADMIN'
+                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          }`}>
+                            {member.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Member'}
+                          </span>
+                        </p>
+                        <p className="text-xs text-slate-400">{member.userEmail}</p>
+                      </div>
+                    </div>
+                    {isSuperAdmin && member.role !== 'SUPER_ADMIN' && (
+                      <button
+                        onClick={() => handleRemove(member.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                        title="Remove member"
+                      >
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </button>
                     )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {members.map((member) => (
-                    <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                            {member.userName}
-                            {member.role === 'SUPER_ADMIN' && (
-                              <span className="px-1.5 py-0.5 text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded font-medium">
-                                Super Admin
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-slate-400">{member.userEmail}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          member.role === 'SUPER_ADMIN'
-                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}>
-                          {member.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin Member'}
-                        </span>
-                      </td>
-                      {PERMISSIONS.map((p) => {
-                        const isEditing = editingId === member.id;
-                        const value = isEditing ? editPerms[p.key] : member[p.key];
-                        return (
-                          <td key={p.key} className="px-2 py-3 text-center">
-                            {member.role === 'SUPER_ADMIN' ? (
-                              <span className="text-green-600 dark:text-green-400">✓</span>
-                            ) : isEditing ? (
-                              <input
-                                type="checkbox"
-                                checked={value}
-                                onChange={(e) => setEditPerms(prev => ({ ...prev, [p.key]: e.target.checked }))}
-                                className="w-4 h-4 rounded text-violet-600 cursor-pointer"
-                              />
-                            ) : value ? (
-                              <span className="text-green-600 dark:text-green-400">✓</span>
-                            ) : (
-                              <span className="text-slate-300 dark:text-slate-600">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                      {isSuperAdmin && (
-                        <td className="px-4 py-3">
-                          {member.role !== 'SUPER_ADMIN' && (
-                            <div className="flex items-center justify-end gap-2">
-                              {editingId === member.id ? (
-                                <>
-                                  <button
-                                    onClick={() => handleSavePerms(member.id)}
-                                    disabled={saving}
-                                    className="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded hover:bg-green-200 transition-colors"
-                                  >
-                                    <Save className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingId(null)}
-                                    className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded hover:bg-slate-200 transition-colors"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => startEdit(member)}
-                                    className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 transition-colors"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleRemove(member.id)}
-                                    className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 transition-colors"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              )}
+                  </div>
+
+                  {/* Permissions grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    {PERMISSIONS.map((p) => {
+                      const isToggling = togglingPerm === `${member.id}:${p.key}`;
+                      const enabled = member[p.key];
+                      const isSuper = member.role === 'SUPER_ADMIN';
+                      const canToggle = isSuperAdmin && !isSuper;
+
+                      return (
+                        <button
+                          key={p.key}
+                          onClick={() => canToggle && togglePermission(member, p.key)}
+                          disabled={!canToggle || togglingPerm !== null}
+                          title={canToggle ? `Click to ${enabled ? 'disable' : 'enable'} ${p.label}` : p.description}
+                          className={`relative flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                            canToggle ? 'cursor-pointer' : 'cursor-default'
+                          } ${
+                            isSuper || enabled
+                              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50'
+                              : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/50'
+                          } ${
+                            canToggle && enabled ? 'hover:bg-red-50 hover:border-red-200 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:border-red-800/50 dark:hover:text-red-400' : ''
+                          } ${
+                            canToggle && !enabled ? 'hover:bg-green-50 hover:border-green-200 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:border-green-800/50 dark:hover:text-green-400' : ''
+                          } disabled:opacity-60`}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+                          ) : (
+                            <div className={`w-8 h-4.5 rounded-full relative transition-colors ${
+                              isSuper || enabled
+                                ? 'bg-green-500 dark:bg-green-600'
+                                : 'bg-slate-300 dark:bg-slate-600'
+                            }`}>
+                              <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all ${
+                                isSuper || enabled ? 'left-[calc(100%-16px)]' : 'left-0.5'
+                              }`} />
                             </div>
                           )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <span>{p.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

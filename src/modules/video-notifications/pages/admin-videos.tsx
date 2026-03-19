@@ -27,6 +27,7 @@ export default function AdminVideosPage() {
   const [reviewModal, setReviewModal] = useState<VideoNotification | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewing, setReviewing] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const loadVideos = useCallback(async () => {
     setLoading(true);
@@ -45,6 +46,8 @@ export default function AdminVideosPage() {
       await reviewVideoNotification(reviewModal.id, status, reviewNote);
       setReviewModal(null);
       setReviewNote('');
+      setSuccessMsg(status === 'APPROVED' ? 'Video approved and notifications sent to attendees' : 'Video rejected');
+      setTimeout(() => setSuccessMsg(''), 4000);
       await loadVideos();
     } catch { /* ignore */ } finally { setReviewing(false); }
   };
@@ -85,6 +88,12 @@ export default function AdminVideosPage() {
           ))}
         </div>
 
+        {successMsg && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" /> {successMsg}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex gap-3 mb-4">
           <div className="relative flex-1 max-w-xs">
@@ -110,7 +119,17 @@ export default function AdminVideosPage() {
         </div>
 
         {loading ? (
-          <div className="text-center p-8 text-slate-400">Loading...</div>
+          <div className="space-y-3 animate-pulse">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex gap-4 items-center">
+                <div className="w-20 h-14 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
             <Video className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />

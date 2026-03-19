@@ -6,11 +6,26 @@ import {
   getOrgChatRoom,
   getAdminChatRoom,
   getMyOrganizations,
+  getOrganizationMembers,
+  getAdminTeamMembers,
   sendChatMessage,
   ChatRoom,
   ChatMessage,
 } from '@/modules/shared-common/services/apiService';
-import { MessageCircle, Send, Users, Hash } from 'lucide-react';
+import { MessageCircle, Send, Users, Hash, AtSign } from 'lucide-react';
+
+function renderMessageContent(content: string) {
+  const parts = content.split(/(@\w[\w\s]*?\b)/g);
+  return parts.map((part, i) =>
+    part.startsWith('@') ? (
+      <span key={i} className="font-semibold text-violet-400 dark:text-violet-300 bg-violet-500/10 dark:bg-violet-400/10 px-0.5 rounded">
+        {part}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
 
 interface TeamChatPageProps {
   mode?: 'organizer' | 'admin';
@@ -34,7 +49,12 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRoom = useCallback(async () => {
     try {
@@ -68,6 +88,21 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
   }, [mode]);
 
   useEffect(() => { loadRoom(); }, [loadRoom]);
+
+  // Load team members for @mentions
+  useEffect(() => {
+    (async () => {
+      try {
+        if (mode === 'admin') {
+          const members = await getAdminTeamMembers();
+          setTeamMembers(members.map(m => ({ id: m.userId, name: m.userName })));
+        } else if (orgId) {
+          const members = await getOrganizationMembers(orgId);
+          setTeamMembers(members.map(m => ({ id: m.userId, name: m.userName })));
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [mode, orgId]);
 
   // Poll for new messages every 3s
   useEffect(() => {
@@ -103,7 +138,66 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
     } catch { /* ignore */ } finally { setSending(false); }
   };
 
+  const filteredMentions = teamMembers.filter(m =>
+    m.name.toLowerCase().includes(mentionQuery.toLowerCase()) && m.id !== user?.id
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNewMessage(val);
+    // Detect @mention
+    const cursor = e.target.selectionStart || 0;
+    const textBeforeCursor = val.slice(0, cursor);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setMentionQuery(atMatch[1]);
+      setShowMentions(true);
+      setMentionIndex(0);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (memberName: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const cursor = textarea.selectionStart || 0;
+    const textBeforeCursor = newMessage.slice(0, cursor);
+    const textAfterCursor = newMessage.slice(cursor);
+    const atPos = textBeforeCursor.lastIndexOf('@');
+    const before = newMessage.slice(0, atPos);
+    const mention = `@${memberName} `;
+    setNewMessage(before + mention + textAfterCursor);
+    setShowMentions(false);
+    setTimeout(() => {
+      textarea.focus();
+      const pos = before.length + mention.length;
+      textarea.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showMentions && filteredMentions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex(prev => Math.min(prev + 1, filteredMentions.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(filteredMentions[mentionIndex].name);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setShowMentions(false);
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -185,7 +279,7 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
                             ? 'bg-violet-600 text-white rounded-br-sm'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm'
                         }`}>
-                          <p className="text-sm leading-relaxed">{msg.content}</p>
+                          <p className="text-sm leading-relaxed">{renderMessageContent(msg.content)}</p>
                           <p className={`text-xs mt-0.5 ${isOwn ? 'text-violet-200' : 'text-slate-400'}`}>
                             {formatTime(msg.createdAt)}
                           </p>
@@ -200,26 +294,53 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
 
             {/* Input */}
             <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-              <div className="flex gap-2 items-end">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message... (Enter to send)"
-                  rows={1}
-                  className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-violet-500 resize-none max-h-32"
-                  style={{ minHeight: '44px' }}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!newMessage.trim() || sending}
-                  className="p-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors flex-shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+              <div className="relative">
+                {/* @mention popup */}
+                {showMentions && filteredMentions.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden z-10 max-h-48 overflow-y-auto">
+                    <div className="px-3 py-1.5 text-xs text-slate-400 font-medium border-b border-slate-100 dark:border-slate-700 flex items-center gap-1.5">
+                      <AtSign className="w-3 h-3" /> Mention a team member
+                    </div>
+                    {filteredMentions.map((member, idx) => (
+                      <button
+                        key={member.id}
+                        onClick={() => insertMention(member.name)}
+                        className={`w-full text-left px-3 py-2 flex items-center gap-2.5 text-sm transition-colors ${
+                          idx === mentionIndex
+                            ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 dark:text-violet-400">
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium">{member.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type a message... Use @ to mention"
+                    rows={1}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-violet-500 resize-none max-h-32"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!newMessage.trim() || sending}
+                    className="p-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors flex-shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <p className="text-xs text-slate-400 mt-1.5 ml-1">
-                Shift+Enter for new line · Enter to send
+                Shift+Enter for new line · @ to mention · Enter to send
               </p>
             </div>
           </div>

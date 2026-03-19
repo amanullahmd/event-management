@@ -47,6 +47,7 @@ export default function OrganizerVideosPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -99,17 +100,19 @@ export default function OrganizerVideosPage() {
       await uploadVideoNotification(form.eventId, form.title, form.description, videoFile);
       clearInterval(interval);
       setUploadProgress(100);
-      setTimeout(() => {
-        setShowUpload(false);
-        setForm({ eventId: '', title: '', description: '' });
-        setVideoFile(null);
-        setUploadProgress(0);
-        loadData();
-      }, 500);
-    } catch (err) {
+      setUploadSuccess(true);
+      loadData();
+    } catch (err: unknown) {
       clearInterval(interval);
       setUploadProgress(0);
-      setUploadError('Upload failed. Please check file size (max 50MB) and try again.');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('size') || msg.includes('50MB')) {
+        setUploadError('File too large. Maximum size is 50MB.');
+      } else if (msg.includes('format') || msg.includes('type')) {
+        setUploadError('Unsupported format. Please use MP4, MOV, or AVI.');
+      } else {
+        setUploadError('Upload failed. Please check your connection and try again.');
+      }
     } finally {
       setUploading(false);
     }
@@ -164,7 +167,21 @@ export default function OrganizerVideosPage() {
 
         {/* Videos Grid */}
         {loading ? (
-          <div className="text-center p-8 text-slate-400">Loading videos...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-pulse">
+                <div className="bg-slate-200 dark:bg-slate-700 h-40" />
+                <div className="p-4 space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
+                    <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded-full w-24" />
+                  </div>
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/2" />
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : videos.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
             <Video className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
@@ -260,6 +277,29 @@ export default function OrganizerVideosPage() {
       {showUpload && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            {uploadSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Video Submitted!</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                  Your video has been submitted for admin review. Once approved, all ticket holders will be notified automatically.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowUpload(false);
+                    setUploadSuccess(false);
+                    setForm({ eventId: '', title: '', description: '' });
+                    setVideoFile(null);
+                    setUploadProgress(0);
+                  }}
+                  className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (<>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Upload Video Notification</h2>
               <button onClick={() => setShowUpload(false)} className="text-slate-400 hover:text-slate-600">
@@ -378,6 +418,7 @@ export default function OrganizerVideosPage() {
                 {uploading ? 'Uploading...' : 'Upload & Submit for Review'}
               </button>
             </div>
+            </>)}
           </div>
         </div>
       )}
