@@ -21,6 +21,7 @@ export interface AuthContextType {
     role: UserRole
   ) => Promise<{ redirectUrl?: string; token?: string; [key: string]: unknown } | void>;
   refreshToken: () => Promise<void>;
+  completeMfaVerification: (challengeId: string, code: string) => Promise<void>;
   isTokenExpiringSoon: boolean;
 }
 
@@ -157,8 +158,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
+
+      // MFA required — redirect to verify page instead of issuing tokens
+      if (data.mfaRequired && data.mfaChallengeId) {
+        sessionStorage.setItem('mfa_challenge_id', data.mfaChallengeId);
+        window.location.href = '/mfa-verify';
+        return;
+      }
+
       console.log('Login successful, user:', { id: data.id, email: data.email, role: data.role });
-      
+
       // Store JWT tokens and user info
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_refresh_token', data.refreshToken);
@@ -357,6 +366,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const completeMfaVerification = async (challengeId: string, code: string) => {
+    setIsLoading(true);
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+      const response = await fetch(`${backendUrl}/api/auth/mfa/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId, code }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'MFA verification failed' }));
+        throw new Error(errorData.message || 'MFA verification failed');
+      }
+
+      const data = await response.json();
+
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_refresh_token', data.refreshToken);
+      localStorage.setItem('auth_user_id', data.id);
+      localStorage.setItem('auth_user_role', data.role.toUpperCase());
+      const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
+      localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
+
+      const user: User = {
+        id: data.id,
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        role: data.role.toUpperCase() as UserRole,
+        status: 'active' as const,
+        createdAt: new Date(),
+      };
+      setUser(user);
+      sessionStorage.removeItem('mfa_challenge_id');
+      checkTokenExpiration();
+
+      const roleDashboardRoutes: Record<string, string> = {
+        ADMIN: '/admin',
+        ORGANIZER: '/organizer',
+        CUSTOMER: '/dashboard',
+      };
+      router.push(roleDashboardRoutes[user.role] || '/dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -365,6 +421,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     register,
     refreshToken,
+    completeMfaVerification,
     isTokenExpiringSoon,
   };
 

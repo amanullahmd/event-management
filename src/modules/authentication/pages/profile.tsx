@@ -383,6 +383,22 @@ export default function ProfilePage() {
             </div>
 
             <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Two-Factor Authentication</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Add an extra layer of security by requiring a verification code when you sign in.
+              </p>
+              <a
+                href="/dashboard/security"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                Manage 2FA
+              </a>
+            </div>
+
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
               <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
                 Permanently delete your account and all associated data. This action cannot be undone.
