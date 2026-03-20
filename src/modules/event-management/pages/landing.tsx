@@ -290,7 +290,7 @@ function LandingNav() {
 /*  TrustBar — animated count-up stats + trust badges                  */
 /* ------------------------------------------------------------------ */
 
-function TrustBar({ stats, realOrganizers }: { stats: PlatformStats; realOrganizers: number }) {
+function TrustBar({ stats, realOrganizers, realCategories }: { stats: PlatformStats; realOrganizers: number; realCategories: number }) {
   const { ref, isInView } = useInView({ threshold: 0.3 });
 
   const eventsCount = useCountUp(stats.totalEvents > 0 ? stats.totalEvents : 0, {
@@ -301,7 +301,7 @@ function TrustBar({ stats, realOrganizers }: { stats: PlatformStats; realOrganiz
     startWhen: isInView,
     duration: 2200,
   });
-  const categoriesCount = useCountUp(stats.totalCategories > 0 ? stats.totalCategories : 0, {
+  const categoriesCount = useCountUp(realCategories > 0 ? realCategories : stats.totalCategories, {
     startWhen: isInView,
     duration: 1800,
   });
@@ -632,7 +632,7 @@ function LandingPageContent() {
       <HeroSection />
 
       {/* 3. TrustBar — animated count-up stats + trust badges */}
-      <TrustBar stats={stats} realOrganizers={platformOrganizers} />
+      <TrustBar stats={stats} realOrganizers={platformOrganizers} realCategories={categories.length} />
 
       {/* 4. Event Discovery — consolidated category filter + tabs + events */}
       <section className="bg-white dark:bg-slate-950">

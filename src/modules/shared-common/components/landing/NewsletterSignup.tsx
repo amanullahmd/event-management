@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/modules/shared-common/utils/cn';
 
 export interface NewsletterSignupProps {
@@ -16,17 +16,29 @@ export function NewsletterSignup({ className }: NewsletterSignupProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setStatus('loading');
-
-    // Simulate signup — in production wire to a real endpoint
-    setTimeout(() => {
-      setStatus('success');
-      setEmail('');
-    }, 1200);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8080'}/api/newsletter/subscribe`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        }
+      );
+      if (res.ok) {
+        setStatus('success');
+        setEmail('');
+      } else {
+        setStatus('error');
+      }
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (
@@ -68,6 +80,23 @@ export function NewsletterSignup({ className }: NewsletterSignupProps) {
             <span className="text-emerald-300 font-medium">
               You&apos;re subscribed! Check your inbox for a welcome email.
             </span>
+          </div>
+        ) : status === 'error' ? (
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <span className="text-red-300 font-medium">
+                Something went wrong. Please try again.
+              </span>
+            </div>
+            <div>
+              <button
+                onClick={() => setStatus('idle')}
+                className="text-sm text-violet-400 hover:text-violet-300 underline"
+              >
+                Try again
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="max-w-md mx-auto">
