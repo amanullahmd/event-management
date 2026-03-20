@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/modules/shared-commo
 import { Card } from '@/modules/shared-common/components/ui/card';
 import { Button } from '@/modules/shared-common/components/ui/button';
 import { Input } from '@/modules/shared-common/components/ui/input';
+import { PhoneInput } from '@/modules/shared-common/components/ui/phone-input';
 import { Alert } from '@/modules/shared-common/components/ui/alert';
 
 interface CustomerProfile {
@@ -275,12 +276,10 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Phone Number</label>
-                <Input
-                  type="tel"
+                <PhoneInput
                   value={profile.phoneNumber}
-                  onChange={(e) => handleChange('phoneNumber', e.target.value)}
+                  onChange={(val) => handleChange('phoneNumber', val)}
                   disabled={!isEditing}
-                  error={errors.phoneNumber}
                 />
                 {errors.phoneNumber && <p className="mt-1 text-sm text-red-500">{errors.phoneNumber}</p>}
               </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { initiateSmsSetup, confirmSmsSetup } from '@/modules/authentication/services/mfaService';
+import { PhoneInput } from '@/modules/shared-common/components/ui/phone-input';
 
 type Step = 1 | 2 | 3;
 
@@ -76,12 +77,9 @@ export default function SmsSetupPage() {
               We will send a one-time verification code to this number each time you sign in.
             </p>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone number</label>
-            <input
-              type="tel"
+            <PhoneInput
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 555 000 0000"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onChange={setPhone}
             />
           </div>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
