@@ -138,6 +138,7 @@ export async function apiRequest<T>(
         response = await fetch(url, {
           ...options,
           headers: retryHeaders,
+          signal: AbortSignal.timeout(DEFAULT_TIMEOUT),
         });
       } else {
         // Refresh failed, redirect to login

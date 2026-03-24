@@ -43,7 +43,7 @@ export const RecommendationSettingsComponent: React.FC<RecommendationSettingsCom
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify(settings),
       });
@@ -75,7 +75,7 @@ export const RecommendationSettingsComponent: React.FC<RecommendationSettingsCom
       const response = await fetch('/api/user-profile/settings/reset', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
       });
 

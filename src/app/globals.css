@@ -2,6 +2,8 @@
 @import "../styles/tokens.css";
 @import "../styles/utilities.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Use design system tokens */
   --background: var(--color-background);

@@ -20,7 +20,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "flex h-10 w-full rounded-md border border-(--color-border) bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-(--color-text-tertiary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-(--color-border) dark:bg-(--color-surface) dark:ring-offset-slate-950 dark:placeholder:text-(--color-text-tertiary) dark:focus-visible:ring-(--color-primary) touch-target",
+            "flex h-10 w-full rounded-md border border-(--color-border) bg-slate-50 px-3 py-2 text-sm ring-offset-white placeholder:text-(--color-text-tertiary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-(--color-border) dark:bg-(--color-surface) dark:ring-offset-slate-950 dark:placeholder:text-(--color-text-tertiary) dark:focus-visible:ring-(--color-primary) touch-target",
             error && "border-(--color-error) focus-visible:ring-(--color-error)",
             prefixIcon && "pl-10",
             suffixIcon && "pr-10",

@@ -34,7 +34,7 @@ export function PricingAuditLogViewer({
           `/api/events/${eventId}/ticket-types/${ticketTypeId}/pricing-audit-logs`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
             },
           }
         );

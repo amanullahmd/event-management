@@ -19,10 +19,24 @@ export function useImageUpload() {
 
   const getAuthToken = (): string | null => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('token');
+    return localStorage.getItem('auth_token');
   };
 
   const uploadImage = useCallback(async (eventId: string, file: File) => {
+    // Client-side validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid image format. Allowed: JPEG, PNG, WebP, GIF');
+      setStatus('error');
+      throw new Error('Invalid image format');
+    }
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setError('Image too large. Maximum size: 10MB');
+      setStatus('error');
+      throw new Error('Image too large');
+    }
+
     setStatus('uploading');
     setError(null);
 

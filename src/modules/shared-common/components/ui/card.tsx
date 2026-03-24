@@ -27,8 +27,8 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        elevated: "bg-white dark:bg-(--color-surface) shadow-md border border-(--color-border)",
-        outlined: "bg-white dark:bg-(--color-surface) border border-(--color-border) shadow-sm",
+        elevated: "bg-white dark:bg-(--color-surface) shadow-lg border border-(--color-border)",
+        outlined: "bg-white dark:bg-(--color-surface) border border-(--color-border) shadow-sm hover:shadow-md",
         filled: "bg-(--color-surface) dark:bg-slate-800 border-none shadow-sm",
       },
     },

@@ -75,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token) {
           // Fetch current user from backend using stored token
           const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-          console.log('Initializing auth with backend URL:', backendUrl);
           
           try {
             const response = await fetch(`${backendUrl}/api/auth/me`, {
@@ -100,20 +99,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               checkTokenExpiration();
             } else {
               // Token is invalid, clear it
-              console.warn('Token validation failed with status:', response.status);
+              // Token invalid — clear stored auth
               localStorage.removeItem('auth_token');
               localStorage.removeItem('auth_refresh_token');
               localStorage.removeItem('auth_token_expires_at');
               localStorage.removeItem('auth_user_id');
               localStorage.removeItem('auth_user_role');
             }
-          } catch (fetchError) {
-            console.error('Failed to fetch user from backend:', fetchError);
+          } catch {
             // Don't clear tokens on network error, just skip initialization
           }
         }
-      } catch (error) {
-        console.error('Failed to initialize auth:', error);
+      } catch {
+        // Auth initialization failed silently
       } finally {
         setIsLoading(false);
       }
@@ -127,8 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Call backend API
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      console.log('Attempting login with backend URL:', backendUrl);
-      console.log('Login request body:', { email, password: '***' });
       
       const response = await fetch(`${backendUrl}/api/auth/login`, {
         method: 'POST',
@@ -138,22 +134,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log('Login response status:', response.status);
-      console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
-        let errorData: any = {};
+        let errorData: Record<string, unknown> = {};
         try {
           errorData = await response.json();
-        } catch (parseError) {
-          // If JSON parsing fails, try to get the response text for debugging
-          const responseText = await response.text();
-          console.error('Failed to parse error response as JSON. Response text:', responseText);
-          errorData = { message: `Login failed with status ${response.status}` };
+        } catch {
+          errorData = { message: 'Login failed' };
         }
-        // Extract the error message from the response
-        const errorMessage = errorData.message || `Login failed with status ${response.status}`;
-        console.error('Login error response:', errorMessage);
+        const errorMessage = errorData.message as string || 'Invalid email or password';
         throw new Error(errorMessage);
       }
 
@@ -165,8 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.location.href = '/mfa-verify';
         return;
       }
-
-      console.log('Login successful, user:', { id: data.id, email: data.email, role: data.role });
 
       // Store JWT tokens and user info
       localStorage.setItem('auth_token', data.token);
@@ -200,9 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const redirectPath = roleDashboardRoutes[user.role] || '/dashboard';
       router.push(redirectPath);
     } catch (error) {
-      console.error('Login error:', error);
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        console.error('Network error - backend may not be accessible at:', process.env.NEXT_PUBLIC_BACKEND_URL);
+        throw new Error('Unable to connect to server. Please try again later.');
       }
       throw error;
     } finally {
@@ -246,10 +231,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiresAt = new Date(new Date().getTime() + data.expiresIn * 1000);
       localStorage.setItem('auth_token_expires_at', expiresAt.toISOString());
       
-      console.log('Token refreshed successfully');
       checkTokenExpiration();
     } catch (error) {
-      console.error('Token refresh error:', error);
       throw error;
     }
   };
@@ -270,8 +253,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Logout endpoint may fail, continue with client-side logout
         });
       }
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
+      // Logout endpoint may fail, continue with client-side cleanup
     } finally {
       // Clear tokens and user state
       localStorage.removeItem('auth_token');
@@ -314,18 +297,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        let errorData: any = {};
+        let errorData: Record<string, unknown> = {};
         try {
           errorData = await response.json();
-        } catch (parseError) {
-          // If JSON parsing fails, try to get the response text for debugging
-          const responseText = await response.text();
-          console.error('Failed to parse error response as JSON. Response text:', responseText);
+        } catch {
           errorData = { message: 'Registration failed' };
         }
-        // Extract the error message from the response
-        const errorMessage = errorData.message || 'Registration failed';
-        console.error('Registration error response:', errorMessage);
+        const errorMessage = errorData.message as string || 'Registration failed';
         throw new Error(errorMessage);
       }
 

@@ -98,7 +98,7 @@ export default function TeamChatPage({ mode = 'organizer' }: TeamChatPageProps) 
           setTeamMembers(members.map(m => ({ id: m.userId, name: m.userName })));
         } else if (orgId) {
           const members = await getOrganizationMembers(orgId);
-          setTeamMembers(members.map(m => ({ id: m.userId, name: m.userName })));
+          setTeamMembers(members.map(m => ({ id: m.userId, name: m.userName || '' })));
         }
       } catch { /* ignore */ }
     })();

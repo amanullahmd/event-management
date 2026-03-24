@@ -69,8 +69,7 @@ export default function CustomerOrdersPage() {
 
       enriched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(enriched);
-    } catch (err) {
-      console.error('Failed to fetch orders:', err);
+    } catch {
       setError('Failed to load your orders');
     } finally {
       setLoading(false);

@@ -38,7 +38,7 @@ export const ReferralLinkGenerationForm: React.FC<ReferralLinkGenerationFormProp
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`${backendUrl}/api/events/${eventId}/referral-links`, {
         method: 'POST',
         headers: {

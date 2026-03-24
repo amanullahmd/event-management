@@ -277,7 +277,7 @@ export const EventSetupWizard: React.FC<EventSetupWizardProps> = ({ onSuccess, o
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('Authentication required');
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'}/api/events`, {

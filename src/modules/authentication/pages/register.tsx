@@ -124,18 +124,18 @@ export default function RegisterPage() {
 
   if (pendingApproval) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 px-4">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 text-center">
             <div className="mb-4 flex justify-center">
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted</h2>
-            <p className="text-slate-600 mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Application Submitted</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">
               Your organizer account has been created and is <strong>pending admin approval</strong>.
               You will receive an email once your account has been reviewed and activated.
             </p>
@@ -152,15 +152,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg dark:shadow-slate-900/50 p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
               Create Account
             </h1>
-            <p className="text-slate-600">Join Event Manager today</p>
+            <p className="text-slate-600 dark:text-slate-400">Join Event Manager today</p>
           </div>
 
           {/* Error Message */}
@@ -176,7 +176,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Full Name
               </label>
@@ -187,7 +187,7 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="John Doe"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Full name"
               />
@@ -197,7 +197,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Email Address
               </label>
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Email address"
               />
@@ -218,7 +218,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="role"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Account Type
               </label>
@@ -227,7 +227,7 @@ export default function RegisterPage() {
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Account type"
               >
@@ -245,7 +245,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Password
               </label>
@@ -256,7 +256,7 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Password"
               />
@@ -265,7 +265,7 @@ export default function RegisterPage() {
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600">Password strength:</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">Password strength:</span>
                     <span className={`text-xs font-semibold ${
                       getPasswordStrength().color === 'bg-red-500' ? 'text-red-600' :
                       getPasswordStrength().color === 'bg-yellow-500' ? 'text-yellow-600' :
@@ -309,7 +309,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Confirm Password
               </label>
@@ -320,7 +320,7 @@ export default function RegisterPage() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 disabled={isSubmitting || isLoading}
                 aria-label="Confirm password"
               />
@@ -338,7 +338,7 @@ export default function RegisterPage() {
 
           {/* Login Link */}
           <div className="mt-6 text-center">
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
               Already have an account?{' '}
               <Link
                 href="/login"

@@ -324,7 +324,7 @@ export function DashboardLayout({
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950">
           <div className="p-4 sm:p-6 lg:p-8">
             {pageTitle && (
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">

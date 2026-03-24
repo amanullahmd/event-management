@@ -52,7 +52,7 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
         else setIsLoadingMore(true);
 
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         const response = await fetch(
           `${backendUrl}/api/recommendations?limit=${BATCH_SIZE}&offset=${pageOffset}`,
           {
@@ -111,8 +111,11 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingMore && !loading) {
-          setOffset((prev) => prev + BATCH_SIZE);
-          fetchRecommendations(offset + BATCH_SIZE);
+          setOffset((prev) => {
+            const newOffset = prev + BATCH_SIZE;
+            fetchRecommendations(newOffset);
+            return newOffset;
+          });
         }
       },
       { threshold: 0.1 }
@@ -123,7 +126,7 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
     }
 
     return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, loading, offset, fetchRecommendations]);
+  }, [hasMore, isLoadingMore, loading, fetchRecommendations]);
 
   const handleEventClick = (eventId: string) => {
     // Track view interaction
@@ -146,7 +149,7 @@ export const PersonalizedFeedComponent: React.FC<PersonalizedFeedComponentProps>
   const trackInteraction = async (eventId: string, type: 'VIEW' | 'CLICK' | 'REGISTER' | 'DISMISS') => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       await fetch(`${backendUrl}/api/recommendations/feedback`, {
         method: 'POST',
         headers: {

@@ -971,12 +971,23 @@ export interface VideoNotification {
   createdAt: string;
 }
 
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
 export async function uploadVideoNotification(
   eventId: string,
   title: string,
   description: string,
   videoFile: File
 ): Promise<VideoNotification> {
+  // Client-side validation
+  if (!ALLOWED_VIDEO_TYPES.includes(videoFile.type)) {
+    throw new Error('Invalid video format. Allowed: MP4, WebM, MOV');
+  }
+  if (videoFile.size > MAX_VIDEO_SIZE) {
+    throw new Error('Video file too large. Maximum size: 500MB');
+  }
+
   const formData = new FormData();
   formData.append('eventId', eventId);
   formData.append('title', title);
@@ -985,13 +996,14 @@ export async function uploadVideoNotification(
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
   const token = typeof window !== 'undefined'
-    ? localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    ? localStorage.getItem('auth_token')
     : null;
 
   const response = await fetch(`${API_BASE_URL}/api/video-notifications/upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
+    signal: AbortSignal.timeout(120000), // 2 min timeout for uploads
   });
 
   if (!response.ok) throw new Error('Upload failed');

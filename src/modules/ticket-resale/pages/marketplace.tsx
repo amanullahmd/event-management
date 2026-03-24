@@ -114,7 +114,8 @@ export default function MarketplacePage() {
       setPriceError('Price must be greater than $0.00');
       return;
     }
-    const maxPrice = selectedTicket ? (selectedTicket.price || selectedTicket.priceCents / 100 || Infinity) * 1.1 : Infinity;
+    const ticketAny = selectedTicket as unknown as { price?: number; priceCents?: number };
+    const maxPrice = selectedTicket ? ((ticketAny.price || (ticketAny.priceCents ?? 0) / 100) || Infinity) * 1.1 : Infinity;
     if (price > maxPrice) {
       setPriceError(`Max allowed: ${formatCurrency(maxPrice)} (110% of original)`);
       return;

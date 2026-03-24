@@ -43,7 +43,7 @@ export const RecommendationAnalyticsDashboard: React.FC<RecommendationAnalyticsD
 
       const response = await fetch(`/api/recommendations/metrics?${params}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
       });
 

@@ -29,17 +29,14 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['recharts', 'lucide-react'],
   },
 
-  // Module resolution for modular structure
-  webpack: (config) => {
-    // Optimize module resolution for modular structure
-    config.resolve.alias = {
-      ...config.resolve.alias,
+  // Turbopack configuration (Next.js 16 default)
+  turbopack: {
+    resolveAlias: {
       '@/modules': path.resolve(process.cwd(), 'src/modules'),
-    };
-    return config;
+    },
   },
 
-  // Headers for caching
+  // Security and caching headers
   async headers() {
     return [
       {
@@ -57,6 +54,30 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=3600, s-maxage=3600',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' http://localhost:* https://*; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
           },
         ],
       },

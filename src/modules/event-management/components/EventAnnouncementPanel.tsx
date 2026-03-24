@@ -45,7 +45,7 @@ export default function EventAnnouncementPanel({ eventId, eventTitle }: EventAnn
 
     setIsSending(true);
     try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'}/api/events/${eventId}/announcements`,
         {
